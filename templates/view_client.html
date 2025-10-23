@@ -1,0 +1,62 @@
+{% extends "base.html" %}
+
+{% block title %}{{ client.full_name }} - Client Details{% endblock %}
+
+{% block content %}
+<div class="client-detail-header">
+    <h1>{{ client.full_name }}</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('create_program', client_id=client.id) }}" class="btn btn-primary">Create Program</a>
+        <a href="{{ url_for('schedule_session', client_id=client.id) }}" class="btn btn-info">Schedule Session</a>
+        <a href="{{ url_for('trainer_dashboard') }}" class="btn btn-secondary">Back</a>
+    </div>
+</div>
+
+<div class="client-info-card">
+    <p><strong>Email:</strong> {{ client.email }}</p>
+    <p><strong>Username:</strong> {{ client.username }}</p>
+    <p><strong>Member Since:</strong> {{ client.created_at[:10] }}</p>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <h2>Programs</h2>
+        {% if programs %}
+        <div class="program-list">
+            {% for program in programs %}
+            <div class="program-item">
+                <h3>{{ program.name }}</h3>
+                <p>{{ program.description }}</p>
+                <p class="text-muted">Created: {{ program.created_at[:10] }}</p>
+                <a href="{{ url_for('view_program', program_id=program.id) }}" class="btn btn-sm">View Details</a>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No programs created yet.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Training Sessions</h2>
+        {% if sessions %}
+        <div class="session-list">
+            {% for session in sessions %}
+            <div class="session-item">
+                <div class="session-date">
+                    <strong>{{ session.session_date[:10] }}</strong>
+                    <span class="badge badge-{{ session.status }}">{{ session.status }}</span>
+                </div>
+                <p><strong>Duration:</strong> {{ session.duration }} minutes</p>
+                {% if session.notes %}
+                <p><strong>Notes:</strong> {{ session.notes }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No sessions scheduled.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

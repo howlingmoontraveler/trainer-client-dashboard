@@ -1,0 +1,56 @@
+{% extends "base.html" %}
+
+{% block title %}Trainer Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Trainer Dashboard</h1>
+    <a href="{{ url_for('add_client') }}" class="btn btn-primary">Add New Client</a>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <h2>My Clients</h2>
+        {% if clients %}
+        <div class="client-list">
+            {% for client in clients %}
+            <div class="client-item">
+                <div class="client-info">
+                    <h3>{{ client.full_name }}</h3>
+                    <p>{{ client.email }}</p>
+                    <p class="text-muted">Member since: {{ client.created_at[:10] }}</p>
+                </div>
+                <div class="client-actions">
+                    <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-sm">View</a>
+                    <a href="{{ url_for('create_program', client_id=client.id) }}" class="btn btn-sm btn-success">New Program</a>
+                    <a href="{{ url_for('schedule_session', client_id=client.id) }}" class="btn btn-sm btn-info">Schedule Session</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No clients yet. Add your first client to get started!</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Upcoming Sessions</h2>
+        {% if sessions %}
+        <div class="session-list">
+            {% for session in sessions %}
+            <div class="session-item">
+                <div class="session-date">
+                    <strong>{{ session.session_date[:10] }}</strong>
+                    <span class="badge badge-{{ session.status }}">{{ session.status }}</span>
+                </div>
+                <p><strong>Client:</strong> {{ session.client_name }}</p>
+                <p><strong>Duration:</strong> {{ session.duration }} minutes</p>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No upcoming sessions scheduled.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

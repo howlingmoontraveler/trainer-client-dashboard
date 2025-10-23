@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}{{ program.name }}{% endblock %}
+
+{% block content %}
+<div class="program-detail-header">
+    <div>
+        <h1>{{ program.name }}</h1>
+        <p class="program-description">{{ program.description }}</p>
+        <p class="text-muted">Created: {{ program.created_at[:10] }}</p>
+    </div>
+    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+</div>
+
+<div class="card">
+    <h2>Exercises</h2>
+    {% if exercises %}
+    <div class="exercise-list">
+        {% for exercise in exercises %}
+        <div class="exercise-card">
+            <div class="exercise-header">
+                <h3>{{ exercise.exercise_order }}. {{ exercise.name }}</h3>
+            </div>
+            <div class="exercise-details">
+                {% if exercise.sets %}
+                <p><strong>Sets:</strong> {{ exercise.sets }}</p>
+                {% endif %}
+                {% if exercise.reps %}
+                <p><strong>Reps:</strong> {{ exercise.reps }}</p>
+                {% endif %}
+                {% if exercise.weight %}
+                <p><strong>Weight:</strong> {{ exercise.weight }}</p>
+                {% endif %}
+                {% if exercise.notes %}
+                <p><strong>Notes:</strong> {{ exercise.notes }}</p>
+                {% endif %}
+            </div>
+            {% if session.role == 'client' %}
+            <div class="workout-log">
+                <button class="btn btn-sm btn-primary" onclick="showLogModal({{ exercise.id }}, '{{ exercise.name }}')">Log Workout</button>
+            </div>
+            {% endif %}
+        </div>
+        {% endfor %}
+    </div>
+    {% else %}
+    <p class="empty-state">No exercises in this program.</p>
+    {% endif %}
+</div>
+
+{% if session.role == 'client' %}
+<!-- Workout Log Modal -->
+<div id="logModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeLogModal()">&times;</span>
+        <h2>Log Workout: <span id="modalExerciseName"></span></h2>
+        <form id="logForm">
+            <input type="hidden" id="exerciseId" name="exercise_id">
+            <div class="form-group">
+                <label>Sets Completed</label>
+                <input type="number" id="setsCompleted" name="sets_completed" required>
+            </div>
+            <div class="form-group">
+                <label>Reps Completed</label>
+                <input type="number" id="repsCompleted" name="reps_completed" required>
+            </div>
+            <div class="form-group">
+                <label>Weight Used (lbs)</label>
+                <input type="number" step="0.5" id="weightUsed" name="weight_used">
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <textarea id="logNotes" name="notes" rows="2"></textarea>
+            </div>
+            <button type="button" class="btn btn-primary" onclick="submitLog()">Save</button>
+            <button type="button" class="btn btn-secondary" onclick="closeLogModal()">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function showLogModal(exerciseId, exerciseName) {
+    document.getElementById('exerciseId').value = exerciseId;
+    document.getElementById('modalExerciseName').textContent = exerciseName;
+    document.getElementById('logModal').style.display = 'block';
+}
+
+function closeLogModal() {
+    document.getElementById('logModal').style.display = 'none';
+    document.getElementById('logForm').reset();
+}
+
+function submitLog() {
+    const data = {
+        exercise_id: document.getElementById('exerciseId').value,
+        sets_completed: document.getElementById('setsCompleted').value,
+        reps_completed: document.getElementById('repsCompleted').value,
+        weight_used: document.getElementById('weightUsed').value,
+        notes: document.getElementById('logNotes').value
+    };
+
+    fetch('/api/log_workout', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify(data)
+    })
+    .then(response => response.json())
+    .then(data => {
+        alert(data.message);
+        closeLogModal();
+    })
+    .catch(error => {
+        alert('Error logging workout');
+        console.error('Error:', error);
+    });
+}
+</script>
+{% endif %}
+
+{% endblock %}

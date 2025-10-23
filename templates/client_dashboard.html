@@ -1,0 +1,57 @@
+{% extends "base.html" %}
+
+{% block title %}Client Dashboard{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>My Workout Programs</h1>
+</div>
+
+<div class="dashboard-grid">
+    <div class="card">
+        <h2>My Programs</h2>
+        {% if programs %}
+        <div class="program-list">
+            {% for program in programs %}
+            <div class="program-item">
+                <div class="program-info">
+                    <h3>{{ program.name }}</h3>
+                    <p>{{ program.description }}</p>
+                    <p class="text-muted">Created by: {{ program.trainer_name }}</p>
+                    <p class="text-muted">Date: {{ program.created_at[:10] }}</p>
+                </div>
+                <div class="program-actions">
+                    <a href="{{ url_for('view_program', program_id=program.id) }}" class="btn btn-primary">View Program</a>
+                </div>
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No programs assigned yet. Your trainer will create programs for you.</p>
+        {% endif %}
+    </div>
+
+    <div class="card">
+        <h2>Upcoming Sessions</h2>
+        {% if sessions %}
+        <div class="session-list">
+            {% for session in sessions %}
+            <div class="session-item">
+                <div class="session-date">
+                    <strong>{{ session.session_date[:10] }}</strong>
+                    <span class="badge badge-{{ session.status }}">{{ session.status }}</span>
+                </div>
+                <p><strong>Trainer:</strong> {{ session.trainer_name }}</p>
+                <p><strong>Duration:</strong> {{ session.duration }} minutes</p>
+                {% if session.notes %}
+                <p><strong>Notes:</strong> {{ session.notes }}</p>
+                {% endif %}
+            </div>
+            {% endfor %}
+        </div>
+        {% else %}
+        <p class="empty-state">No upcoming sessions scheduled.</p>
+        {% endif %}
+    </div>
+</div>
+{% endblock %}

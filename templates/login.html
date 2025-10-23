@@ -1,0 +1,32 @@
+{% extends "base.html" %}
+
+{% block title %}Login - Trainer Dashboard{% endblock %}
+
+{% block content %}
+<div class="login-container">
+    <div class="login-box">
+        <h1>Login</h1>
+        <p>Welcome to the Trainer Dashboard</p>
+
+        <form method="POST" action="{{ url_for('login') }}">
+            <div class="form-group">
+                <label for="username">Username</label>
+                <input type="text" id="username" name="username" required autofocus>
+            </div>
+
+            <div class="form-group">
+                <label for="password">Password</label>
+                <input type="password" id="password" name="password" required>
+            </div>
+
+            <button type="submit" class="btn btn-primary">Login</button>
+        </form>
+
+        <div class="login-help">
+            <p><strong>Demo Accounts:</strong></p>
+            <p>Trainer: <code>trainer1</code> / Password: <code>password123</code></p>
+            <p>Client: <code>client1</code> / Password: <code>password123</code></p>
+        </div>
+    </div>
+</div>
+{% endblock %}
