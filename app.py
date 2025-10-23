@@ -202,6 +202,7 @@ def create_program(client_id):
         program_id = cursor.lastrowid
 
         # Add exercises
+        exercise_library_ids = request.form.getlist('exercise_library_id[]')
         exercise_names = request.form.getlist('exercise_name[]')
         exercise_sets = request.form.getlist('exercise_sets[]')
         exercise_reps = request.form.getlist('exercise_reps[]')
@@ -209,16 +210,24 @@ def create_program(client_id):
 
         for i, name in enumerate(exercise_names):
             if name.strip():
+                library_id = exercise_library_ids[i] if i < len(exercise_library_ids) and exercise_library_ids[i] else None
                 db.execute('''
-                    INSERT INTO exercises (program_id, name, sets, reps, notes, exercise_order)
-                    VALUES (?, ?, ?, ?, ?, ?)
-                ''', (program_id, name, exercise_sets[i], exercise_reps[i], exercise_notes[i], i + 1))
+                    INSERT INTO exercises (program_id, exercise_library_id, name, sets, reps, notes, exercise_order)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (program_id, library_id, name, exercise_sets[i], exercise_reps[i], exercise_notes[i], i + 1))
 
         db.commit()
         flash('Program created successfully!', 'success')
         return redirect(url_for('view_client', client_id=client_id))
 
-    return render_template('create_program.html', client=client)
+    # Get all exercises from library for dropdown
+    exercises_library = db.execute('''
+        SELECT id, name, category, equipment, description
+        FROM exercise_library
+        ORDER BY category, name
+    ''').fetchall()
+
+    return render_template('create_program.html', client=client, exercises_library=exercises_library)
 
 @app.route('/trainer/client/<int:client_id>')
 @login_required
@@ -331,6 +340,73 @@ def log_workout():
     db.commit()
 
     return jsonify({'success': True, 'message': 'Workout logged successfully!'})
+
+@app.route('/api/exercises', methods=['GET'])
+@login_required
+@trainer_required
+def get_exercises():
+    """Get exercises from library with optional filtering"""
+    category = request.args.get('category', '')
+    search = request.args.get('search', '')
+
+    db = get_db()
+    query = 'SELECT id, name, category, equipment, description FROM exercise_library WHERE 1=1'
+    params = []
+
+    if category:
+        query += ' AND category = ?'
+        params.append(category)
+
+    if search:
+        query += ' AND name LIKE ?'
+        params.append(f'%{search}%')
+
+    query += ' ORDER BY category, name'
+
+    exercises = db.execute(query, params).fetchall()
+
+    return jsonify([{
+        'id': ex['id'],
+        'name': ex['name'],
+        'category': ex['category'],
+        'equipment': ex['equipment'],
+        'description': ex['description']
+    } for ex in exercises])
+
+@app.route('/api/exercises/custom', methods=['POST'])
+@login_required
+@trainer_required
+def add_custom_exercise():
+    """Add a custom exercise to the library"""
+    data = request.json
+    name = data.get('name')
+    category = data.get('category', 'Custom')
+    equipment = data.get('equipment', '')
+    description = data.get('description', '')
+
+    if not name:
+        return jsonify({'success': False, 'message': 'Exercise name is required'}), 400
+
+    db = get_db()
+    try:
+        cursor = db.execute('''
+            INSERT INTO exercise_library (name, category, equipment, description, is_custom, created_by)
+            VALUES (?, ?, ?, ?, 1, ?)
+        ''', (name, category, equipment, description, session['user_id']))
+        db.commit()
+
+        return jsonify({
+            'success': True,
+            'exercise': {
+                'id': cursor.lastrowid,
+                'name': name,
+                'category': category,
+                'equipment': equipment,
+                'description': description
+            }
+        })
+    except sqlite3.IntegrityError:
+        return jsonify({'success': False, 'message': 'Exercise already exists'}), 400
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['DATABASE']):
