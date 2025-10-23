@@ -10,8 +10,7 @@
     <nav class="navbar">
         <div class="nav-container">
             <a href="{{ url_for('dashboard') }}" class="nav-brand">
-                <!-- Logo placeholder - Add your logo to /static/images/logo.png -->
-                <!-- <img src="{{ url_for('static', filename='images/logo.png') }}" alt="Better For Y'all Logo" class="nav-logo"> -->
+                <img src="{{ url_for('static', filename='images/logo.PNG') }}" alt="Better For Y'all Logo" class="nav-logo">
                 Better For Y'all Training
             </a>
             {% if session.user_id %}
