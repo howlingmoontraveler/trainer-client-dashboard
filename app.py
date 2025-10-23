@@ -289,6 +289,83 @@ def view_program(program_id):
 
     return render_template('view_program.html', program=program, exercises=exercises)
 
+@app.route('/trainer/program/edit/<int:program_id>', methods=['GET', 'POST'])
+@login_required
+@trainer_required
+def edit_program(program_id):
+    db = get_db()
+
+    # Get program and verify trainer has access to it
+    program = db.execute('''
+        SELECT p.*, u.full_name as client_name
+        FROM programs p
+        JOIN users u ON p.client_id = u.id
+        WHERE p.id = ?
+    ''', (program_id,)).fetchone()
+
+    if not program:
+        flash('Program not found.', 'error')
+        return redirect(url_for('trainer_dashboard'))
+
+    # Verify the client belongs to this trainer
+    client_check = db.execute('''
+        SELECT 1 FROM clients
+        WHERE trainer_id = ? AND client_id = ?
+    ''', (session['user_id'], program['client_id'])).fetchone()
+
+    if not client_check:
+        flash('Access denied.', 'error')
+        return redirect(url_for('trainer_dashboard'))
+
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+
+        # Update program
+        db.execute('''
+            UPDATE programs
+            SET name = ?, description = ?
+            WHERE id = ?
+        ''', (name, description, program_id))
+
+        # Delete existing exercises
+        db.execute('DELETE FROM exercises WHERE program_id = ?', (program_id,))
+
+        # Add updated exercises
+        exercise_library_ids = request.form.getlist('exercise_library_id[]')
+        exercise_names = request.form.getlist('exercise_name[]')
+        exercise_sets = request.form.getlist('exercise_sets[]')
+        exercise_reps = request.form.getlist('exercise_reps[]')
+        exercise_notes = request.form.getlist('exercise_notes[]')
+
+        for i, name in enumerate(exercise_names):
+            if name.strip():
+                library_id = exercise_library_ids[i] if i < len(exercise_library_ids) and exercise_library_ids[i] else None
+                db.execute('''
+                    INSERT INTO exercises (program_id, exercise_library_id, name, sets, reps, notes, exercise_order)
+                    VALUES (?, ?, ?, ?, ?, ?, ?)
+                ''', (program_id, library_id, name, exercise_sets[i], exercise_reps[i], exercise_notes[i], i + 1))
+
+        db.commit()
+        flash('Program updated successfully!', 'success')
+        return redirect(url_for('view_program', program_id=program_id))
+
+    # Get existing exercises
+    exercises = db.execute('''
+        SELECT * FROM exercises
+        WHERE program_id = ?
+        ORDER BY exercise_order
+    ''', (program_id,)).fetchall()
+
+    # Get all exercises from library for dropdown
+    exercises_library = db.execute('''
+        SELECT id, name, category, equipment, description
+        FROM exercise_library
+        ORDER BY category, name
+    ''').fetchall()
+
+    return render_template('edit_program.html', program=program, exercises=exercises, exercises_library=exercises_library)
+
 @app.route('/trainer/session/schedule/<int:client_id>', methods=['GET', 'POST'])
 @login_required
 @trainer_required

@@ -1,0 +1,329 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Program{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Edit Program for {{ program.client_name }}</h1>
+
+    <form method="POST" action="{{ url_for('edit_program', program_id=program.id) }}" id="programForm">
+        <div class="form-group">
+            <label for="name">Program Name *</label>
+            <input type="text" id="name" name="name" required placeholder="e.g., Upper Body Strength" value="{{ program.name }}">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3" placeholder="Brief description of the program">{{ program.description }}</textarea>
+        </div>
+
+        <h2>Exercises</h2>
+
+        <!-- Filter by category -->
+        <div class="form-group">
+            <label for="categoryFilter">Filter by Category:</label>
+            <select id="categoryFilter" class="category-filter">
+                <option value="">All Categories</option>
+                <option value="Legs">Legs</option>
+                <option value="Back">Back</option>
+                <option value="Chest">Chest</option>
+                <option value="Shoulders">Shoulders</option>
+                <option value="Arms">Arms</option>
+                <option value="Core">Core</option>
+                <option value="Cardio">Cardio</option>
+                <option value="Mobility">Mobility</option>
+                <option value="Functional">Functional</option>
+            </select>
+        </div>
+
+        <div id="exercises">
+            {% for exercise in exercises %}
+            <div class="exercise-item" data-index="{{ loop.index0 }}">
+                <div class="exercise-fields">
+                    <div class="form-group">
+                        <label>Exercise *</label>
+                        <input type="hidden" name="exercise_library_id[]" class="exercise-library-id" value="{{ exercise.exercise_library_id or '' }}">
+                        <select name="exercise_name[]" class="exercise-select" required onchange="selectExercise(this)">
+                            <option value="">-- Select Exercise --</option>
+                            {% for ex in exercises_library %}
+                            <option value="{{ ex.name }}" data-id="{{ ex.id }}" data-category="{{ ex.category }}" data-equipment="{{ ex.equipment }}" data-description="{{ ex.description }}" {% if ex.name == exercise.name %}selected{% endif %}>
+                                {{ ex.name }} ({{ ex.category }})
+                            </option>
+                            {% endfor %}
+                            <option value="__custom__">+ Add Custom Exercise</option>
+                        </select>
+                        <small class="exercise-description"></small>
+                    </div>
+                    <div class="form-group">
+                        <label>Sets</label>
+                        <input type="text" name="exercise_sets[]" placeholder="e.g., 3" value="{{ exercise.sets or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Reps</label>
+                        <input type="text" name="exercise_reps[]" placeholder="e.g., 10-12" value="{{ exercise.reps or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <input type="text" name="exercise_notes[]" placeholder="e.g., 60s rest" value="{{ exercise.notes or '' }}">
+                    </div>
+                </div>
+                {% if not loop.first %}
+                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">Remove</button>
+                {% endif %}
+            </div>
+            {% endfor %}
+
+            {% if not exercises %}
+            <div class="exercise-item" data-index="0">
+                <div class="exercise-fields">
+                    <div class="form-group">
+                        <label>Exercise *</label>
+                        <input type="hidden" name="exercise_library_id[]" class="exercise-library-id">
+                        <select name="exercise_name[]" class="exercise-select" required onchange="selectExercise(this)">
+                            <option value="">-- Select Exercise --</option>
+                            {% for ex in exercises_library %}
+                            <option value="{{ ex.name }}" data-id="{{ ex.id }}" data-category="{{ ex.category }}" data-equipment="{{ ex.equipment }}" data-description="{{ ex.description }}">
+                                {{ ex.name }} ({{ ex.category }})
+                            </option>
+                            {% endfor %}
+                            <option value="__custom__">+ Add Custom Exercise</option>
+                        </select>
+                        <small class="exercise-description"></small>
+                    </div>
+                    <div class="form-group">
+                        <label>Sets</label>
+                        <input type="text" name="exercise_sets[]" placeholder="e.g., 3">
+                    </div>
+                    <div class="form-group">
+                        <label>Reps</label>
+                        <input type="text" name="exercise_reps[]" placeholder="e.g., 10-12">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <input type="text" name="exercise_notes[]" placeholder="e.g., 60s rest">
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <button type="button" class="btn btn-secondary" onclick="addExercise()">Add Another Exercise</button>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Update Program</button>
+            <a href="{{ url_for('view_program', program_id=program.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<!-- Custom Exercise Modal -->
+<div id="customExerciseModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeCustomExerciseModal()">&times;</span>
+        <h2>Add Custom Exercise</h2>
+        <div class="form-group">
+            <label>Exercise Name *</label>
+            <input type="text" id="customExerciseName" placeholder="e.g., Cable Crossovers">
+        </div>
+        <div class="form-group">
+            <label>Category</label>
+            <select id="customExerciseCategory">
+                <option value="Chest">Chest</option>
+                <option value="Back">Back</option>
+                <option value="Legs">Legs</option>
+                <option value="Shoulders">Shoulders</option>
+                <option value="Arms">Arms</option>
+                <option value="Core">Core</option>
+                <option value="Cardio">Cardio</option>
+                <option value="Custom">Custom</option>
+            </select>
+        </div>
+        <div class="form-group">
+            <label>Equipment</label>
+            <input type="text" id="customExerciseEquipment" placeholder="e.g., Cable, Dumbbell">
+        </div>
+        <div class="form-group">
+            <label>Description</label>
+            <textarea id="customExerciseDescription" rows="2"></textarea>
+        </div>
+        <button type="button" class="btn btn-primary" onclick="saveCustomExercise()">Save Exercise</button>
+        <button type="button" class="btn btn-secondary" onclick="closeCustomExerciseModal()">Cancel</button>
+    </div>
+</div>
+
+<script>
+let exerciseIndex = {{ exercises|length if exercises else 0 }};
+let currentCustomSelect = null;
+
+function selectExercise(selectElement) {
+    const option = selectElement.options[selectElement.selectedIndex];
+    const exerciseItem = selectElement.closest('.exercise-item');
+    const hiddenInput = exerciseItem.querySelector('.exercise-library-id');
+    const descriptionElement = exerciseItem.querySelector('.exercise-description');
+
+    if (option.value === '__custom__') {
+        currentCustomSelect = selectElement;
+        document.getElementById('customExerciseModal').style.display = 'block';
+        selectElement.selectedIndex = 0;
+    } else if (option.value) {
+        hiddenInput.value = option.dataset.id || '';
+        const equipment = option.dataset.equipment || '';
+        const description = option.dataset.description || '';
+        descriptionElement.textContent = equipment ? `${equipment} - ${description}` : description;
+    } else {
+        hiddenInput.value = '';
+        descriptionElement.textContent = '';
+    }
+}
+
+function addExercise() {
+    exerciseIndex++;
+    const exercisesDiv = document.getElementById('exercises');
+    const exerciseItem = document.createElement('div');
+    exerciseItem.className = 'exercise-item';
+    exerciseItem.dataset.index = exerciseIndex;
+    exerciseItem.innerHTML = `
+        <div class="exercise-fields">
+            <div class="form-group">
+                <label>Exercise *</label>
+                <input type="hidden" name="exercise_library_id[]" class="exercise-library-id">
+                <select name="exercise_name[]" class="exercise-select" required onchange="selectExercise(this)">
+                    <option value="">-- Select Exercise --</option>
+                    {% for ex in exercises_library %}
+                    <option value="{{ ex.name }}" data-id="{{ ex.id }}" data-category="{{ ex.category }}" data-equipment="{{ ex.equipment }}" data-description="{{ ex.description }}">
+                        {{ ex.name }} ({{ ex.category }})
+                    </option>
+                    {% endfor %}
+                    <option value="__custom__">+ Add Custom Exercise</option>
+                </select>
+                <small class="exercise-description"></small>
+            </div>
+            <div class="form-group">
+                <label>Sets</label>
+                <input type="text" name="exercise_sets[]" placeholder="e.g., 4">
+            </div>
+            <div class="form-group">
+                <label>Reps</label>
+                <input type="text" name="exercise_reps[]" placeholder="e.g., 8-10">
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <input type="text" name="exercise_notes[]" placeholder="e.g., Slow tempo">
+            </div>
+        </div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">Remove</button>
+    `;
+    exercisesDiv.appendChild(exerciseItem);
+}
+
+function closeCustomExerciseModal() {
+    document.getElementById('customExerciseModal').style.display = 'none';
+    document.getElementById('customExerciseName').value = '';
+    document.getElementById('customExerciseCategory').value = 'Custom';
+    document.getElementById('customExerciseEquipment').value = '';
+    document.getElementById('customExerciseDescription').value = '';
+    currentCustomSelect = null;
+}
+
+function saveCustomExercise() {
+    const name = document.getElementById('customExerciseName').value.trim();
+    const category = document.getElementById('customExerciseCategory').value;
+    const equipment = document.getElementById('customExerciseEquipment').value.trim();
+    const description = document.getElementById('customExerciseDescription').value.trim();
+
+    if (!name) {
+        alert('Please enter an exercise name');
+        return;
+    }
+
+    fetch('/api/exercises/custom', {
+        method: 'POST',
+        headers: {
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            name: name,
+            category: category,
+            equipment: equipment,
+            description: description
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            // Add new exercise to all dropdowns
+            const newOption = `<option value="${data.exercise.name}" data-id="${data.exercise.id}" data-category="${data.exercise.category}" data-equipment="${data.exercise.equipment}" data-description="${data.exercise.description}">${data.exercise.name} (${data.exercise.category})</option>`;
+
+            document.querySelectorAll('.exercise-select').forEach(select => {
+                // Insert before the "Add Custom" option
+                const customOption = Array.from(select.options).find(opt => opt.value === '__custom__');
+                select.insertBefore(createOptionElement(data.exercise), customOption);
+            });
+
+            // Select the new exercise in the current dropdown
+            if (currentCustomSelect) {
+                currentCustomSelect.value = data.exercise.name;
+                selectExercise(currentCustomSelect);
+            }
+
+            closeCustomExerciseModal();
+        } else {
+            alert(data.message || 'Error adding custom exercise');
+        }
+    })
+    .catch(error => {
+        alert('Error adding custom exercise');
+        console.error('Error:', error);
+    });
+}
+
+function createOptionElement(exercise) {
+    const option = document.createElement('option');
+    option.value = exercise.name;
+    option.dataset.id = exercise.id;
+    option.dataset.category = exercise.category;
+    option.dataset.equipment = exercise.equipment || '';
+    option.dataset.description = exercise.description || '';
+    option.textContent = `${exercise.name} (${exercise.category})`;
+    return option;
+}
+
+// Category filter
+document.getElementById('categoryFilter').addEventListener('change', function() {
+    const selectedCategory = this.value;
+    document.querySelectorAll('.exercise-select').forEach(select => {
+        Array.from(select.options).forEach(option => {
+            if (option.value === '' || option.value === '__custom__') {
+                option.style.display = '';
+            } else {
+                const optionCategory = option.dataset.category;
+                option.style.display = (!selectedCategory || optionCategory === selectedCategory) ? '' : 'none';
+            }
+        });
+    });
+});
+</script>
+
+<style>
+.exercise-select {
+    width: 100%;
+    max-width: 100%;
+}
+
+.exercise-description {
+    display: block;
+    margin-top: 0.25rem;
+    color: #666;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.category-filter {
+    width: 100%;
+    max-width: 300px;
+    padding: 0.5rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+}
+</style>
+{% endblock %}
