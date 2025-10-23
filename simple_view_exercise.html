@@ -1,0 +1,154 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exercise.name }} - Trainer Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ exercise.name }}</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('edit_exercise', exercise_id=exercise.id) }}" class="btn btn-secondary">Edit</a>
+        <a href="{{ url_for('exercises_list') }}" class="btn btn-outline">Back to Exercises</a>
+    </div>
+</div>
+
+<div class="exercise-detail">
+    <div class="exercise-badges">
+        {% if exercise.category %}
+        <span class="badge category">{{ exercise.category }}</span>
+        {% endif %}
+        <span class="badge difficulty">{{ exercise.difficulty_level.title() }}</span>
+    </div>
+
+    {% if exercise.description %}
+    <div class="info-section">
+        <h3>Description</h3>
+        <p>{{ exercise.description }}</p>
+    </div>
+    {% endif %}
+
+    {% if exercise.instructions %}
+    <div class="info-section">
+        <h3>Instructions</h3>
+        <div class="instructions">{{ exercise.instructions | replace('\n', '<br>') | safe }}</div>
+    </div>
+    {% endif %}
+
+    <div class="exercise-details">
+        {% if exercise.muscle_groups %}
+        <div class="detail-item">
+            <h4>Muscle Groups</h4>
+            <p>{{ exercise.muscle_groups }}</p>
+        </div>
+        {% endif %}
+
+        {% if exercise.equipment %}
+        <div class="detail-item">
+            <h4>Equipment</h4>
+            <p>{{ exercise.equipment }}</p>
+        </div>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.exercise-detail {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    padding: 2rem;
+}
+
+.exercise-badges {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+}
+
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.badge.category {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.badge.difficulty {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.info-section {
+    margin-bottom: 2rem;
+}
+
+.info-section h3 {
+    color: #495057;
+    margin-bottom: 1rem;
+}
+
+.instructions {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+    line-height: 1.6;
+}
+
+.exercise-details {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.detail-item {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+}
+
+.detail-item h4 {
+    color: #495057;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+    display: inline-block;
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-outline {
+    background: transparent;
+    color: #6c757d;
+    border: 1px solid #6c757d;
+}
+</style>
+{% endblock %}
+

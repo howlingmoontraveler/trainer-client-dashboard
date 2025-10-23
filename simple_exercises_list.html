@@ -1,0 +1,122 @@
+{% extends "base.html" %}
+
+{% block title %}Exercise Library - Trainer Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>Exercise Library</h1>
+    <a href="{{ url_for('create_exercise') }}" class="btn btn-primary">Add New Exercise</a>
+</div>
+
+<!-- Simple exercises list -->
+<div class="exercises-list">
+    {% for exercise in exercises %}
+    <div class="exercise-item">
+        <h3>{{ exercise.name }}</h3>
+        <div class="exercise-info">
+            <span class="category">{{ exercise.category or 'Uncategorized' }}</span>
+            <span class="difficulty">{{ exercise.difficulty_level.title() }}</span>
+        </div>
+        {% if exercise.description %}
+        <p>{{ exercise.description }}</p>
+        {% endif %}
+        {% if exercise.muscle_groups %}
+        <p><strong>Muscle Groups:</strong> {{ exercise.muscle_groups }}</p>
+        {% endif %}
+        <div class="exercise-actions">
+            <a href="{{ url_for('view_exercise', exercise_id=exercise.id) }}" class="btn btn-sm">View</a>
+            <a href="{{ url_for('edit_exercise', exercise_id=exercise.id) }}" class="btn btn-sm">Edit</a>
+        </div>
+    </div>
+    {% else %}
+    <div class="empty-state">
+        <h3>No exercises found</h3>
+        <p><a href="{{ url_for('create_exercise') }}">Add your first exercise</a></p>
+    </div>
+    {% endfor %}
+</div>
+
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.exercises-list {
+    display: grid;
+    gap: 1rem;
+}
+
+.exercise-item {
+    background: white;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.exercise-item h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.exercise-info {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.category, .difficulty {
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    font-size: 0.875rem;
+    font-weight: 600;
+}
+
+.category {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.difficulty {
+    background: #f3e5f5;
+    color: #7b1fa2;
+}
+
+.exercise-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-weight: 600;
+    cursor: pointer;
+}
+
+.btn-primary {
+    background: #007bff;
+    color: white;
+}
+
+.btn-sm {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.875rem;
+    background: #6c757d;
+    color: white;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 3rem;
+    color: #6c757d;
+}
+</style>
+{% endblock %}
+
