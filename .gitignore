@@ -185,3 +185,16 @@ app.log
 
 # Python cache
 __pycache__/
+# Old Fantasy Football Analytics files (not part of trainer dashboard)
+.RData
+.gitattributes
+COMPLETE_PROJECT_CODE.txt
+COPY_THIS_TO_CREATE_PROJECT.md
+Config/
+Data/
+FantasyFootballAnalyticsR.Rproj
+Figures/
+R Scripts/
+RMarkdown/
+main.R
+debug.log
