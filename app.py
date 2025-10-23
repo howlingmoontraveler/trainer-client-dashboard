@@ -6,20 +6,80 @@ from datetime import datetime
 import os
 
 app = Flask(__name__)
-app.secret_key = os.urandom(24)
-app.config['DATABASE'] = 'trainer_dashboard.db'
+app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
+
+# Check if running on Render with PostgreSQL
+DATABASE_URL = os.environ.get('DATABASE_URL')
+USE_POSTGRES = DATABASE_URL is not None
+
+if USE_POSTGRES:
+    app.config['DATABASE_URL'] = DATABASE_URL.replace('postgres://', 'postgresql://', 1) if DATABASE_URL.startswith('postgres://') else DATABASE_URL
+else:
+    app.config['DATABASE'] = 'trainer_dashboard.db'
 
 # Database helper functions
 def get_db():
-    db = sqlite3.connect(app.config['DATABASE'])
-    db.row_factory = sqlite3.Row
-    return db
+    if USE_POSTGRES:
+        import psycopg2
+        import psycopg2.extras
+        conn = psycopg2.connect(app.config['DATABASE_URL'])
+        return PostgresDB(conn)
+    else:
+        db = sqlite3.connect(app.config['DATABASE'])
+        db.row_factory = sqlite3.Row
+        return db
+
+# Simple wrapper to make PostgreSQL work like SQLite
+class PostgresDB:
+    def __init__(self, conn):
+        self.conn = conn
+        import psycopg2.extras
+        self.cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+
+    def execute(self, query, params=()):
+        # Convert SQLite ? to PostgreSQL %s
+        query = query.replace('?', '%s')
+        self.cursor.execute(query, params)
+        return self.cursor
+
+    def commit(self):
+        self.conn.commit()
+
+    def close(self):
+        self.cursor.close()
+        self.conn.close()
 
 def init_db():
-    db = get_db()
+    """Initialize database schema"""
     with app.open_resource('schema.sql', mode='r') as f:
-        db.cursor().executescript(f.read())
-    db.commit()
+        schema = f.read()
+
+    if USE_POSTGRES:
+        # Adapt schema for PostgreSQL
+        schema = schema.replace('INTEGER PRIMARY KEY AUTOINCREMENT', 'SERIAL PRIMARY KEY')
+        schema = schema.replace('AUTOINCREMENT', '')
+        schema = schema.replace('BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE')
+        schema = schema.replace('DATETIME', 'TIMESTAMP')
+
+        conn = get_db()
+        cursor = conn.cursor()
+
+        # Execute statements individually
+        statements = [s.strip() for s in schema.split(';') if s.strip() and not s.strip().startswith('--')]
+        for stmt in statements:
+            try:
+                cursor.execute(stmt)
+            except Exception as e:
+                print(f"Error: {e} - Statement: {stmt[:100]}")
+
+        conn.commit()
+        cursor.close()
+        conn.close()
+    else:
+        db = get_db()
+        db.cursor().executescript(schema)
+        db.commit()
+        db.close()
 
 # Authentication decorator
 def login_required(f):
