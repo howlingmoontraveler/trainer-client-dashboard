@@ -14,6 +14,9 @@
             <div class="nav-menu">
                 <span class="nav-user">Hello, {{ session.full_name }}!</span>
                 <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                {% if session.role == 'trainer' %}
+                <a href="{{ url_for('exercises_list') }}" class="nav-link">Exercises</a>
+                {% endif %}
                 <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
             </div>
             {% endif %}

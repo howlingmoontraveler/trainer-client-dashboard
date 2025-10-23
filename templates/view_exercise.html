@@ -1,0 +1,214 @@
+{% extends "base.html" %}
+
+{% block title %}{{ exercise.name }} - Trainer Dashboard{% endblock %}
+
+{% block content %}
+<div class="page-header">
+    <h1>{{ exercise.name }}</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('edit_exercise', exercise_id=exercise.id) }}" class="btn btn-secondary">Edit</a>
+        <a href="{{ url_for('exercises_list') }}" class="btn btn-outline">Back to Exercises</a>
+    </div>
+</div>
+
+<div class="exercise-detail">
+    <div class="exercise-info">
+        <div class="exercise-badges">
+            {% if exercise.category %}
+            <span class="badge badge-category">{{ exercise.category }}</span>
+            {% endif %}
+            <span class="badge badge-difficulty badge-{{ exercise.difficulty_level }}">{{ exercise.difficulty_level.title() }}</span>
+        </div>
+
+        {% if exercise.description %}
+        <div class="info-section">
+            <h3>Description</h3>
+            <p>{{ exercise.description }}</p>
+        </div>
+        {% endif %}
+
+        {% if exercise.instructions %}
+        <div class="info-section">
+            <h3>Instructions</h3>
+            <div class="instructions-content">
+                {{ exercise.instructions | replace('\n', '<br>') | safe }}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="exercise-details-grid">
+            {% if exercise.muscle_groups %}
+            <div class="detail-item">
+                <h4>Muscle Groups</h4>
+                <p>{{ exercise.muscle_groups }}</p>
+            </div>
+            {% endif %}
+
+            {% if exercise.equipment %}
+            <div class="detail-item">
+                <h4>Equipment</h4>
+                <p>{{ exercise.equipment }}</p>
+            </div>
+            {% endif %}
+        </div>
+    </div>
+
+    <div class="exercise-actions">
+        <a href="{{ url_for('edit_exercise', exercise_id=exercise.id) }}" class="btn btn-primary">Edit Exercise</a>
+        <form method="POST" action="{{ url_for('delete_exercise', exercise_id=exercise.id) }}" class="delete-form" onsubmit="return confirm('Are you sure you want to delete this exercise? This action cannot be undone.')">
+            <button type="submit" class="btn btn-danger">Delete Exercise</button>
+        </form>
+    </div>
+</div>
+{% endblock %}
+
+{% block scripts %}
+<style>
+.page-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+}
+
+.header-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+.exercise-detail {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    overflow: hidden;
+}
+
+.exercise-info {
+    padding: 2rem;
+}
+
+.exercise-badges {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.badge {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.875rem;
+    font-weight: 600;
+    text-transform: uppercase;
+}
+
+.badge-category {
+    background: #e3f2fd;
+    color: #1976d2;
+}
+
+.badge-difficulty {
+    color: white;
+}
+
+.badge-beginner {
+    background: #4caf50;
+}
+
+.badge-intermediate {
+    background: #ff9800;
+}
+
+.badge-advanced {
+    background: #f44336;
+}
+
+.info-section {
+    margin-bottom: 2rem;
+}
+
+.info-section h3 {
+    color: #495057;
+    margin-bottom: 1rem;
+    font-size: 1.25rem;
+}
+
+.info-section p {
+    color: #6c757d;
+    line-height: 1.6;
+    margin: 0;
+}
+
+.instructions-content {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+    border-left: 4px solid #007bff;
+    line-height: 1.6;
+    color: #495057;
+}
+
+.exercise-details-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+    margin-top: 2rem;
+}
+
+.detail-item {
+    background: #f8f9fa;
+    padding: 1.5rem;
+    border-radius: 6px;
+}
+
+.detail-item h4 {
+    color: #495057;
+    margin-bottom: 0.75rem;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.detail-item p {
+    color: #6c757d;
+    margin: 0;
+    line-height: 1.5;
+}
+
+.exercise-actions {
+    background: #f8f9fa;
+    padding: 1.5rem 2rem;
+    border-top: 1px solid #e9ecef;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.delete-form {
+    display: inline;
+}
+
+@media (max-width: 768px) {
+    .page-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .header-actions {
+        justify-content: stretch;
+    }
+    
+    .header-actions .btn {
+        flex: 1;
+    }
+    
+    .exercise-details-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .exercise-actions {
+        flex-direction: column;
+    }
+}
+</style>
+{% endblock %}
