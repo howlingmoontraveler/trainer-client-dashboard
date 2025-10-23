@@ -399,6 +399,37 @@ def schedule_session(client_id):
 
     return render_template('schedule_session.html', client=client)
 
+@app.route('/trainer/client/<int:client_id>/reset-password', methods=['POST'])
+@login_required
+@trainer_required
+def reset_client_password(client_id):
+    db = get_db()
+
+    # Verify client belongs to this trainer
+    client = db.execute('''
+        SELECT u.id, u.full_name
+        FROM users u
+        JOIN clients c ON u.id = c.client_id
+        WHERE c.trainer_id = ? AND u.id = ?
+    ''', (session['user_id'], client_id)).fetchone()
+
+    if not client:
+        flash('Client not found.', 'error')
+        return redirect(url_for('trainer_dashboard'))
+
+    new_password = request.form['new_password']
+    password_hash = generate_password_hash(new_password)
+
+    db.execute('''
+        UPDATE users
+        SET password_hash = ?
+        WHERE id = ?
+    ''', (password_hash, client_id))
+    db.commit()
+
+    flash(f'Password reset successfully for {client["full_name"]}. New password: {new_password}', 'success')
+    return redirect(url_for('view_client', client_id=client_id))
+
 @app.route('/api/log_workout', methods=['POST'])
 @login_required
 def log_workout():

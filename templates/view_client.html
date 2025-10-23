@@ -13,10 +13,44 @@
 </div>
 
 <div class="client-info-card">
+    <h3>Login Credentials</h3>
+    <p><strong>Username:</strong> <code style="background-color: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">{{ client.username }}</code></p>
     <p><strong>Email:</strong> {{ client.email }}</p>
-    <p><strong>Username:</strong> {{ client.username }}</p>
     <p><strong>Member Since:</strong> {{ client.created_at[:10] }}</p>
+    <p class="text-muted" style="margin-top: 1rem;">
+        <strong>Login URL:</strong> Share this link with your client:<br>
+        <code style="background-color: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">{{ request.url_root }}</code>
+    </p>
+    <button type="button" class="btn btn-sm btn-info" onclick="showResetPasswordModal()" style="margin-top: 1rem;">Reset Password</button>
 </div>
+
+<!-- Reset Password Modal -->
+<div id="resetPasswordModal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <span class="close" onclick="closeResetPasswordModal()">&times;</span>
+        <h2>Reset Password for {{ client.full_name }}</h2>
+        <form method="POST" action="{{ url_for('reset_client_password', client_id=client.id) }}">
+            <div class="form-group">
+                <label for="new_password">New Password *</label>
+                <input type="text" id="new_password" name="new_password" required placeholder="Enter new password">
+                <small>Share this password securely with your client.</small>
+            </div>
+            <button type="submit" class="btn btn-primary">Reset Password</button>
+            <button type="button" class="btn btn-secondary" onclick="closeResetPasswordModal()">Cancel</button>
+        </form>
+    </div>
+</div>
+
+<script>
+function showResetPasswordModal() {
+    document.getElementById('resetPasswordModal').style.display = 'block';
+}
+
+function closeResetPasswordModal() {
+    document.getElementById('resetPasswordModal').style.display = 'none';
+    document.getElementById('new_password').value = '';
+}
+</script>
 
 <div class="dashboard-grid">
     <div class="card">
