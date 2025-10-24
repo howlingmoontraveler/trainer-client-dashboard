@@ -132,18 +132,27 @@ def login():
         username = request.form['username']
         password = request.form['password']
 
-        db = get_db()
-        user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+        try:
+            db = get_db()
+            user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+            db.close()
 
-        if user and check_password_hash(user['password_hash'], password):
-            session['user_id'] = user['id']
-            session['username'] = user['username']
-            session['role'] = user['role']
-            session['full_name'] = user['full_name']
-            flash('Login successful!', 'success')
-            return redirect(url_for('dashboard'))
-        else:
-            flash('Invalid username or password.', 'error')
+            if user and check_password_hash(user['password_hash'], password):
+                session['user_id'] = user['id']
+                session['username'] = user['username']
+                session['role'] = user['role']
+                session['full_name'] = user['full_name']
+                flash('Login successful!', 'success')
+                return redirect(url_for('dashboard'))
+            else:
+                flash('Invalid username or password.', 'error')
+        except Exception as e:
+            # Database not initialized or connection error
+            error_msg = str(e).lower()
+            if 'no such table' in error_msg or 'does not exist' in error_msg:
+                flash('Database not initialized. Please contact administrator.', 'error')
+            else:
+                flash(f'Database error: {str(e)}', 'error')
 
     return render_template('login.html')
 
@@ -152,6 +161,44 @@ def logout():
     session.clear()
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
+
+@app.route('/setup', methods=['GET', 'POST'])
+def setup():
+    """Initialize database - one-time setup"""
+    if request.method == 'POST':
+        try:
+            init_db()
+            flash('Database initialized successfully! You can now log in with username: trainer1, password: password123', 'success')
+            return redirect(url_for('login'))
+        except Exception as e:
+            flash(f'Error initializing database: {str(e)}', 'error')
+
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Database Setup</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+            h1 { color: #1e293b; }
+            .btn { background: #0d9488; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+            .btn:hover { background: #0f766e; }
+            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 20px 0; }
+        </style>
+    </head>
+    <body>
+        <h1>Database Setup Required</h1>
+        <p>The database needs to be initialized before you can use the application.</p>
+        <div class="warning">
+            <strong>Warning:</strong> This will create all database tables and add demo data. Only run this once!
+        </div>
+        <form method="POST">
+            <button type="submit" class="btn">Initialize Database</button>
+        </form>
+        <p style="margin-top: 20px;"><small>After setup, login with:<br>Username: <code>trainer1</code><br>Password: <code>password123</code></small></p>
+    </body>
+    </html>
+    '''
 
 @app.route('/dashboard')
 @login_required
