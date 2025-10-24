@@ -60,6 +60,11 @@ def init_db():
         schema = schema.replace('AUTOINCREMENT', '')
         schema = schema.replace('BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE')
         schema = schema.replace('DATETIME', 'TIMESTAMP')
+        # Add ON CONFLICT for duplicate handling
+        schema = schema.replace(
+            'INSERT INTO exercise_library (name, category, equipment, description) VALUES',
+            'INSERT INTO exercise_library (name, category, equipment, description) VALUES'
+        )
 
         conn = get_db()
         cursor = conn.cursor()
@@ -68,18 +73,32 @@ def init_db():
         statements = [s.strip() for s in schema.split(';') if s.strip() and not s.strip().startswith('--')]
         for stmt in statements:
             try:
+                # Add ON CONFLICT for PostgreSQL inserts to handle duplicates
+                if 'INSERT INTO exercise_library' in stmt:
+                    stmt = stmt.rstrip(';') + ' ON CONFLICT (name) DO NOTHING'
+                elif 'INSERT INTO users' in stmt and 'WHERE NOT EXISTS' not in stmt:
+                    stmt = stmt.rstrip(';') + ' ON CONFLICT (username) DO NOTHING'
                 cursor.execute(stmt)
             except Exception as e:
-                print(f"Error: {e} - Statement: {stmt[:100]}")
+                # Ignore duplicate key errors, print others
+                if 'duplicate' not in str(e).lower() and 'unique' not in str(e).lower():
+                    print(f"Error: {e}")
 
         conn.commit()
         cursor.close()
         conn.close()
     else:
         db = get_db()
-        db.cursor().executescript(schema)
-        db.commit()
-        db.close()
+        try:
+            db.cursor().executescript(schema)
+            db.commit()
+        except Exception as e:
+            # Ignore duplicate errors in SQLite
+            if 'UNIQUE constraint' not in str(e):
+                print(f"Error: {e}")
+                raise
+        finally:
+            db.close()
 
 # Authentication decorator
 def login_required(f):

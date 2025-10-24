@@ -104,8 +104,7 @@ SELECT 1, 2
 WHERE NOT EXISTS (SELECT 1 FROM clients WHERE trainer_id = 1 AND client_id = 2);
 
 -- Populate Exercise Library (only if empty)
-INSERT INTO exercise_library (name, category, equipment, description)
-SELECT * FROM (VALUES
+INSERT INTO exercise_library (name, category, equipment, description) VALUES
 -- Legs
 ('Back Squat', 'Legs', 'Barbell', 'Compound lower body exercise'),
 ('Bodyweight Squat', 'Legs', 'Bodyweight', 'Foundational squat pattern'),
@@ -230,6 +229,4 @@ SELECT * FROM (VALUES
 -- Functional
 ('Farmer''s Carry', 'Functional', 'Dumbbell', 'Loaded carry exercise'),
 ('Power Clean', 'Functional', 'Barbell', 'Olympic lift variation'),
-('Safety Bar Carry', 'Functional', 'Safety Bar', 'Loaded walking exercise')
-) AS new_exercises(name, category, equipment, description)
-WHERE NOT EXISTS (SELECT 1 FROM exercise_library LIMIT 1);
+('Safety Bar Carry', 'Functional', 'Safety Bar', 'Loaded walking exercise');
