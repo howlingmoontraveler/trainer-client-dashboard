@@ -596,7 +596,9 @@ def add_custom_exercise():
         return jsonify({'success': False, 'message': 'Exercise already exists'}), 400
 
 if __name__ == '__main__':
-    if not os.path.exists(app.config['DATABASE']):
+    # Only auto-initialize SQLite database if it doesn't exist
+    # PostgreSQL should be initialized manually via Shell
+    if not USE_POSTGRES and not os.path.exists(app.config['DATABASE']):
         init_db()
     # Use PORT from environment (for Render) or default to 5000 for local
     port = int(os.environ.get('PORT', 5000))
