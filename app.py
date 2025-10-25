@@ -12,20 +12,18 @@ app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 DATABASE_URL = os.environ.get('DATABASE_URL')
 USE_POSTGRES = DATABASE_URL is not None
 
-# Try importing psycopg2, gracefully fall back to SQLite if not available
+# Try importing psycopg, gracefully fall back to SQLite if not available
 if USE_POSTGRES:
     try:
-        import psycopg2
-        import psycopg2.extras
+        import psycopg
+        from psycopg.rows import dict_row
         app.config['DATABASE_URL'] = DATABASE_URL.replace('postgres://', 'postgresql://', 1) if DATABASE_URL.startswith('postgres://') else DATABASE_URL
-        print("Using PostgreSQL database")
+        print("Using PostgreSQL database with psycopg3")
     except ImportError as e:
         print("=" * 60)
-        print("WARNING: PostgreSQL configured but psycopg2 not available")
+        print("WARNING: PostgreSQL configured but psycopg not available")
         print(f"Error: {e}")
-        print("This is likely due to Python 3.13 incompatibility with psycopg2")
         print("FALLING BACK TO SQLITE - Data will NOT persist across restarts!")
-        print("To fix: Remove DATABASE_URL env var OR ensure Python 3.12 is used")
         print("=" * 60)
         USE_POSTGRES = False
         app.config['DATABASE'] = 'trainer_dashboard.db'
@@ -36,9 +34,9 @@ else:
 # Database helper functions
 def get_db():
     if USE_POSTGRES:
-        import psycopg2
-        import psycopg2.extras
-        conn = psycopg2.connect(app.config['DATABASE_URL'])
+        import psycopg
+        from psycopg.rows import dict_row
+        conn = psycopg.connect(app.config['DATABASE_URL'], row_factory=dict_row)
         return PostgresDB(conn)
     else:
         db = sqlite3.connect(app.config['DATABASE'])
@@ -49,8 +47,7 @@ def get_db():
 class PostgresDB:
     def __init__(self, conn):
         self.conn = conn
-        import psycopg2.extras
-        self.cursor = conn.cursor(cursor_factory=psycopg2.extras.RealDictCursor)
+        self.cursor = conn.cursor()
 
     def execute(self, query, params=()):
         # Convert SQLite ? to PostgreSQL %s
