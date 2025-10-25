@@ -338,42 +338,68 @@ def diagnostic():
 
     # Try to check if tables exist
     try:
-        db = get_db()
+        info.append("Attempting to connect to database...")
 
         if USE_POSTGRES:
+            # Direct connection without wrapper for diagnostic
+            import psycopg
+            from psycopg.rows import dict_row
+            info.append("Creating PostgreSQL connection...")
+            conn = psycopg.connect(app.config['DATABASE_URL'], row_factory=dict_row)
+            cursor = conn.cursor()
+            info.append("Connection successful!")
+
             # Check PostgreSQL tables
-            result = db.execute("""
+            cursor.execute("""
                 SELECT table_name
                 FROM information_schema.tables
                 WHERE table_schema = 'public'
                 ORDER BY table_name
-            """, ()).fetchall()
+            """)
+            result = cursor.fetchall()
             tables = [row['table_name'] for row in result] if result else []
+
+            if tables:
+                info.append(f"Tables found ({len(tables)}): {', '.join(tables)}")
+
+                # Try to count users
+                try:
+                    cursor.execute("SELECT COUNT(*) as count FROM users")
+                    user_count = cursor.fetchone()
+                    info.append(f"Users in database: {user_count['count'] if user_count else 0}")
+
+                    # List usernames
+                    cursor.execute("SELECT username, role FROM users")
+                    users = cursor.fetchall()
+                    if users:
+                        user_list = ', '.join([f"{u['username']} ({u['role']})" for u in users])
+                        info.append(f"User list: {user_list}")
+                except Exception as e:
+                    info.append(f"Error counting users: {str(e)}")
+            else:
+                info.append("NO TABLES FOUND - Database not initialized!")
+
+            cursor.close()
+            conn.close()
         else:
-            # Check SQLite tables
+            # SQLite
+            db = get_db()
             result = db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", ()).fetchall()
             tables = [row['name'] for row in result] if result else []
 
-        db.close()
-
-        if tables:
-            info.append(f"Tables found: {', '.join(tables)}")
-
-            # Try to count users
-            db = get_db()
-            try:
+            if tables:
+                info.append(f"Tables found: {', '.join(tables)}")
                 user_count = db.execute("SELECT COUNT(*) as count FROM users", ()).fetchone()
                 info.append(f"Users in database: {user_count['count'] if user_count else 0}")
-            except Exception as e:
-                info.append(f"Error counting users: {str(e)}")
+            else:
+                info.append("NO TABLES FOUND - Database not initialized!")
+
             db.close()
-        else:
-            info.append("NO TABLES FOUND - Database not initialized!")
 
     except Exception as e:
-        info.append(f"Error checking database: {str(e)}")
+        info.append(f"ERROR: {str(e)}")
         import traceback
-        info.append(f"Traceback: {traceback.format_exc()}")
+        info.append(f"Full traceback:\n{traceback.format_exc()}")
 
     return f'''
     <!DOCTYPE html>
@@ -381,15 +407,15 @@ def diagnostic():
     <head>
         <title>Database Diagnostic</title>
         <style>
-            body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }}
+            body {{ font-family: Arial, sans-serif; max-width: 900px; margin: 50px auto; padding: 20px; }}
             h1 {{ color: #1e293b; }}
-            .info {{ background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 12px; margin: 10px 0; }}
-            pre {{ background: #f5f5f5; padding: 10px; overflow-x: auto; }}
+            .info {{ background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 12px; margin: 10px 0; white-space: pre-wrap; }}
+            .error {{ background: #fee2e2; border-left: 4px solid #ef4444; }}
         </style>
     </head>
     <body>
         <h1>Database Diagnostic</h1>
-        {"".join([f'<div class="info">{item}</div>' for item in info])}
+        {"".join([f'<div class="info {("error" if "ERROR" in item or "Traceback" in item else "")}">{item}</div>' for item in info])}
         <p style="margin-top: 20px;"><a href="/setup">Go to Setup</a> | <a href="/">Go to Login</a></p>
     </body>
     </html>
