@@ -27,17 +27,42 @@
                 <h3>{{ exercise.exercise_order }}. {{ exercise.name }}</h3>
             </div>
             <div class="exercise-details">
-                {% if exercise.sets %}
-                <p><strong>Sets:</strong> {{ exercise.sets }}</p>
-                {% endif %}
-                {% if exercise.reps %}
-                <p><strong>Reps:</strong> {{ exercise.reps }}</p>
-                {% endif %}
-                {% if exercise.weight %}
-                <p><strong>Weight:</strong> {{ exercise.weight }}</p>
-                {% endif %}
+                <div class="exercise-specs">
+                    {% if exercise.sets %}
+                    <div class="spec-item">
+                        <span class="spec-label">Sets:</span>
+                        <span class="spec-value">{{ exercise.sets }}</span>
+                    </div>
+                    {% endif %}
+                    {% if exercise.reps %}
+                    <div class="spec-item">
+                        <span class="spec-label">Reps:</span>
+                        <span class="spec-value">{{ exercise.reps }}</span>
+                    </div>
+                    {% endif %}
+                    {% if exercise.weight %}
+                    <div class="spec-item">
+                        <span class="spec-label">Weight:</span>
+                        <span class="spec-value">{{ exercise.weight }}</span>
+                    </div>
+                    {% endif %}
+                    {% if exercise.rest_period %}
+                    <div class="spec-item">
+                        <span class="spec-label">Rest:</span>
+                        <span class="spec-value">{{ exercise.rest_period }}</span>
+                    </div>
+                    {% endif %}
+                    {% if exercise.tempo %}
+                    <div class="spec-item">
+                        <span class="spec-label">Tempo:</span>
+                        <span class="spec-value">{{ exercise.tempo }}</span>
+                    </div>
+                    {% endif %}
+                </div>
                 {% if exercise.notes %}
-                <p><strong>Notes:</strong> {{ exercise.notes }}</p>
+                <div class="exercise-notes">
+                    <strong>Notes:</strong> {{ exercise.notes }}
+                </div>
                 {% endif %}
             </div>
             {% if session.role == 'client' %}
@@ -52,6 +77,47 @@
     <p class="empty-state">No exercises in this program.</p>
     {% endif %}
 </div>
+
+<style>
+.exercise-specs {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.spec-item {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+}
+
+.spec-label {
+    font-size: 0.85rem;
+    color: var(--gray-600);
+    font-weight: 500;
+}
+
+.spec-value {
+    font-size: 1.1rem;
+    color: var(--navy);
+    font-weight: 600;
+}
+
+.exercise-notes {
+    background: var(--gray-100);
+    padding: 0.75rem;
+    border-radius: 6px;
+    margin-top: 0.75rem;
+    line-height: 1.6;
+}
+
+@media (max-width: 768px) {
+    .exercise-specs {
+        grid-template-columns: repeat(2, 1fr);
+    }
+}
+</style>
 
 {% if session.role == 'client' %}
 <!-- Workout Log Modal -->

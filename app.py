@@ -666,6 +666,111 @@ def edit_client(client_id):
 
     return render_template('edit_client.html', client=client)
 
+@app.route('/trainer/exercises', methods=['GET'])
+@login_required
+@trainer_required
+def exercise_library():
+    """View and manage exercise library"""
+    db = get_db()
+
+    # Get all exercises
+    exercises = db.execute('''
+        SELECT e.*, u.full_name as created_by_name
+        FROM exercise_library e
+        LEFT JOIN users u ON e.created_by = u.id
+        ORDER BY e.category, e.name
+    ''').fetchall()
+
+    # Get unique categories
+    categories = db.execute('''
+        SELECT DISTINCT category
+        FROM exercise_library
+        WHERE category IS NOT NULL
+        ORDER BY category
+    ''').fetchall()
+
+    db.close()
+
+    return render_template('exercise_library.html', exercises=exercises, categories=categories)
+
+@app.route('/trainer/exercises/add', methods=['GET', 'POST'])
+@login_required
+@trainer_required
+def add_exercise():
+    """Add custom exercise to library"""
+    if request.method == 'POST':
+        name = request.form['name']
+        category = request.form['category']
+        equipment = request.form.get('equipment', '')
+        description = request.form.get('description', '')
+        instructions = request.form.get('instructions', '')
+        demo_url = request.form.get('demo_url', '')
+        muscle_groups = request.form.get('muscle_groups', '')
+
+        db = get_db()
+
+        # Check if exercise name already exists
+        existing = db.execute('SELECT id FROM exercise_library WHERE name = ?', (name,)).fetchone()
+        if existing:
+            flash('An exercise with this name already exists.', 'error')
+            return render_template('add_exercise.html')
+
+        db.execute('''
+            INSERT INTO exercise_library
+            (name, category, equipment, description, instructions, demo_url, muscle_groups, is_custom, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+        ''', (name, category, equipment, description, instructions, demo_url, muscle_groups, session['user_id']))
+
+        db.commit()
+        db.close()
+
+        flash(f'Exercise "{name}" added successfully!', 'success')
+        return redirect(url_for('exercise_library'))
+
+    return render_template('add_exercise.html')
+
+@app.route('/trainer/exercises/<int:exercise_id>/edit', methods=['GET', 'POST'])
+@login_required
+@trainer_required
+def edit_exercise(exercise_id):
+    """Edit exercise in library"""
+    db = get_db()
+
+    exercise = db.execute('SELECT * FROM exercise_library WHERE id = ?', (exercise_id,)).fetchone()
+
+    if not exercise:
+        flash('Exercise not found.', 'error')
+        return redirect(url_for('exercise_library'))
+
+    # Only allow editing custom exercises created by this trainer
+    if not exercise['is_custom'] or exercise['created_by'] != session['user_id']:
+        flash('You can only edit exercises you created.', 'error')
+        return redirect(url_for('exercise_library'))
+
+    if request.method == 'POST':
+        name = request.form['name']
+        category = request.form['category']
+        equipment = request.form.get('equipment', '')
+        description = request.form.get('description', '')
+        instructions = request.form.get('instructions', '')
+        demo_url = request.form.get('demo_url', '')
+        muscle_groups = request.form.get('muscle_groups', '')
+
+        db.execute('''
+            UPDATE exercise_library
+            SET name = ?, category = ?, equipment = ?, description = ?,
+                instructions = ?, demo_url = ?, muscle_groups = ?
+            WHERE id = ?
+        ''', (name, category, equipment, description, instructions, demo_url, muscle_groups, exercise_id))
+
+        db.commit()
+        db.close()
+
+        flash(f'Exercise "{name}" updated successfully!', 'success')
+        return redirect(url_for('exercise_library'))
+
+    return render_template('edit_exercise.html', exercise=exercise)
+
 @app.route('/trainer/programs/create/<int:client_id>', methods=['GET', 'POST'])
 @login_required
 @trainer_required
@@ -702,20 +807,29 @@ def create_program(client_id):
             ''', (client_id, session['user_id'], name, description))
             program_id = cursor.lastrowid
 
-        # Add exercises
+        # Add exercises with all new fields
         exercise_library_ids = request.form.getlist('exercise_library_id[]')
         exercise_names = request.form.getlist('exercise_name[]')
         exercise_sets = request.form.getlist('exercise_sets[]')
         exercise_reps = request.form.getlist('exercise_reps[]')
+        exercise_weights = request.form.getlist('exercise_weight[]')
+        exercise_durations = request.form.getlist('exercise_duration[]')
+        exercise_rests = request.form.getlist('exercise_rest[]')
+        exercise_tempos = request.form.getlist('exercise_tempo[]')
         exercise_notes = request.form.getlist('exercise_notes[]')
 
         for i, name in enumerate(exercise_names):
             if name.strip():
                 library_id = exercise_library_ids[i] if i < len(exercise_library_ids) and exercise_library_ids[i] else None
+                weight = exercise_weights[i] if i < len(exercise_weights) else ''
+                duration = exercise_durations[i] if i < len(exercise_durations) else ''
+                rest_period = exercise_rests[i] if i < len(exercise_rests) else ''
+                tempo = exercise_tempos[i] if i < len(exercise_tempos) else ''
+
                 db.execute('''
-                    INSERT INTO exercises (program_id, exercise_library_id, name, sets, reps, notes, exercise_order)
-                    VALUES (?, ?, ?, ?, ?, ?, ?)
-                ''', (program_id, library_id, name, exercise_sets[i], exercise_reps[i], exercise_notes[i], i + 1))
+                    INSERT INTO exercises (program_id, exercise_library_id, name, sets, reps, weight, notes, exercise_order, tempo, rest_period)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (program_id, library_id, name, exercise_sets[i], exercise_reps[i], weight, exercise_notes[i], i + 1, tempo, rest_period))
 
         db.commit()
         flash('Program created successfully!', 'success')

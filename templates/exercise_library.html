@@ -1,0 +1,253 @@
+{% extends "base.html" %}
+
+{% block title %}Exercise Library{% endblock %}
+
+{% block content %}
+<div class="dashboard-header">
+    <h1>Exercise Library</h1>
+    <div class="header-actions">
+        <a href="{{ url_for('add_exercise') }}" class="btn btn-primary">Add Custom Exercise</a>
+        <a href="{{ url_for('trainer_dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
+</div>
+
+<!-- Search and Filter -->
+<div class="search-filter-bar">
+    <input type="text" id="exerciseSearch" placeholder="Search exercises by name..." class="search-input">
+    <select id="categoryFilter" class="filter-select">
+        <option value="">All Categories</option>
+        {% for cat in categories %}
+        <option value="{{ cat.category }}">{{ cat.category }}</option>
+        {% endfor %}
+    </select>
+    <select id="equipmentFilter" class="filter-select">
+        <option value="">All Equipment</option>
+        <option value="Barbell">Barbell</option>
+        <option value="Dumbbell">Dumbbell</option>
+        <option value="Kettlebell">Kettlebell</option>
+        <option value="Machine">Machine</option>
+        <option value="Cable">Cable</option>
+        <option value="Bodyweight">Bodyweight</option>
+        <option value="Bands">Bands</option>
+        <option value="Other">Other</option>
+    </select>
+</div>
+
+<!-- Exercise Grid -->
+<div class="exercise-grid" id="exerciseGrid">
+    {% for exercise in exercises %}
+    <div class="exercise-card"
+         data-name="{{ exercise.name|lower }}"
+         data-category="{{ exercise.category }}"
+         data-equipment="{{ exercise.equipment or '' }}">
+        <div class="exercise-header">
+            <h3>{{ exercise.name }}</h3>
+            <div class="exercise-badges">
+                <span class="badge badge-category">{{ exercise.category }}</span>
+                {% if exercise.equipment %}
+                <span class="badge badge-equipment">{{ exercise.equipment }}</span>
+                {% endif %}
+                {% if exercise.is_custom %}
+                <span class="badge badge-custom">Custom</span>
+                {% endif %}
+            </div>
+        </div>
+
+        {% if exercise.description %}
+        <p class="exercise-description">{{ exercise.description }}</p>
+        {% endif %}
+
+        {% if exercise.muscle_groups %}
+        <p class="exercise-muscles"><strong>Targets:</strong> {{ exercise.muscle_groups }}</p>
+        {% endif %}
+
+        <div class="exercise-actions">
+            {% if exercise.demo_url %}
+            <a href="{{ exercise.demo_url }}" target="_blank" class="btn btn-sm btn-info">View Demo</a>
+            {% endif %}
+            {% if exercise.is_custom and exercise.created_by == session.user_id %}
+            <a href="{{ url_for('edit_exercise', exercise_id=exercise.id) }}" class="btn btn-sm btn-secondary">Edit</a>
+            {% endif %}
+        </div>
+
+        {% if exercise.instructions %}
+        <details class="exercise-details">
+            <summary>Instructions</summary>
+            <p class="exercise-instructions">{{ exercise.instructions }}</p>
+        </details>
+        {% endif %}
+    </div>
+    {% endfor %}
+</div>
+
+<div id="noExercises" style="display: none;" class="empty-state">
+    No exercises match your search criteria.
+</div>
+
+<style>
+.search-filter-bar {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 2rem;
+    flex-wrap: wrap;
+}
+
+.search-input {
+    flex: 1;
+    min-width: 250px;
+}
+
+.exercise-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+    gap: 1.5rem;
+}
+
+.exercise-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.exercise-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.exercise-header {
+    margin-bottom: 1rem;
+}
+
+.exercise-header h3 {
+    color: var(--navy);
+    margin-bottom: 0.5rem;
+    font-size: 1.1rem;
+}
+
+.exercise-badges {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.badge-category {
+    background: var(--primary-color);
+    color: white;
+}
+
+.badge-equipment {
+    background: var(--gray-200);
+    color: var(--gray-700);
+}
+
+.badge-custom {
+    background: var(--accent-color);
+    color: white;
+}
+
+.exercise-description {
+    color: var(--gray-600);
+    font-size: 0.95rem;
+    margin-bottom: 0.75rem;
+}
+
+.exercise-muscles {
+    color: var(--gray-700);
+    font-size: 0.9rem;
+    margin-bottom: 1rem;
+}
+
+.exercise-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+}
+
+.exercise-details {
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid var(--gray-200);
+}
+
+.exercise-details summary {
+    cursor: pointer;
+    color: var(--primary-color);
+    font-weight: 500;
+    user-select: none;
+}
+
+.exercise-details summary:hover {
+    color: var(--primary-dark);
+}
+
+.exercise-instructions {
+    margin-top: 0.75rem;
+    color: var(--gray-600);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+@media (max-width: 768px) {
+    .search-filter-bar {
+        flex-direction: column;
+    }
+
+    .search-input {
+        width: 100%;
+    }
+
+    .exercise-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('exerciseSearch');
+    const categoryFilter = document.getElementById('categoryFilter');
+    const equipmentFilter = document.getElementById('equipmentFilter');
+    const exerciseGrid = document.getElementById('exerciseGrid');
+    const noExercises = document.getElementById('noExercises');
+
+    function filterExercises() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedCategory = categoryFilter.value;
+        const selectedEquipment = equipmentFilter.value;
+        const exerciseCards = exerciseGrid.querySelectorAll('.exercise-card');
+        let visibleCount = 0;
+
+        exerciseCards.forEach(card => {
+            const name = card.getAttribute('data-name');
+            const category = card.getAttribute('data-category');
+            const equipment = card.getAttribute('data-equipment');
+
+            const matchesSearch = name.includes(searchTerm);
+            const matchesCategory = !selectedCategory || category === selectedCategory;
+            const matchesEquipment = !selectedEquipment || equipment === selectedEquipment;
+
+            if (matchesSearch && matchesCategory && matchesEquipment) {
+                card.style.display = '';
+                visibleCount++;
+            } else {
+                card.style.display = 'none';
+            }
+        });
+
+        if (visibleCount === 0) {
+            exerciseGrid.style.display = 'none';
+            noExercises.style.display = 'block';
+        } else {
+            exerciseGrid.style.display = 'grid';
+            noExercises.style.display = 'none';
+        }
+    }
+
+    searchInput.addEventListener('input', filterExercises);
+    categoryFilter.addEventListener('change', filterExercises);
+    equipmentFilter.addEventListener('change', filterExercises);
+});
+</script>
+{% endblock %}

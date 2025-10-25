@@ -17,6 +17,9 @@
             <div class="nav-menu">
                 <span class="nav-user">Hello, {{ session.full_name }}!</span>
                 <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
+                {% if session.role == 'trainer' %}
+                <a href="{{ url_for('exercise_library') }}" class="nav-link">Exercise Library</a>
+                {% endif %}
                 <a href="https://betterforyall.com" class="nav-link" target="_blank">Back to Website</a>
                 <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
             </div>
