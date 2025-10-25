@@ -502,11 +502,19 @@ def add_client():
 
         # Create client user
         password_hash = generate_password_hash(password)
-        cursor = db.execute('''
-            INSERT INTO users (username, password_hash, role, full_name, email)
-            VALUES (?, ?, 'client', ?, ?)
-        ''', (username, password_hash, full_name, email))
-        client_id = cursor.lastrowid
+        if USE_POSTGRES:
+            cursor = db.execute('''
+                INSERT INTO users (username, password_hash, role, full_name, email)
+                VALUES (?, ?, 'client', ?, ?)
+                RETURNING id
+            ''', (username, password_hash, full_name, email))
+            client_id = cursor.fetchone()['id']
+        else:
+            cursor = db.execute('''
+                INSERT INTO users (username, password_hash, role, full_name, email)
+                VALUES (?, ?, 'client', ?, ?)
+            ''', (username, password_hash, full_name, email))
+            client_id = cursor.lastrowid
 
         # Link client to trainer
         db.execute('''
@@ -542,11 +550,19 @@ def create_program(client_id):
         name = request.form['name']
         description = request.form['description']
 
-        cursor = db.execute('''
-            INSERT INTO programs (client_id, created_by, name, description)
-            VALUES (?, ?, ?, ?)
-        ''', (client_id, session['user_id'], name, description))
-        program_id = cursor.lastrowid
+        if USE_POSTGRES:
+            cursor = db.execute('''
+                INSERT INTO programs (client_id, created_by, name, description)
+                VALUES (?, ?, ?, ?)
+                RETURNING id
+            ''', (client_id, session['user_id'], name, description))
+            program_id = cursor.fetchone()['id']
+        else:
+            cursor = db.execute('''
+                INSERT INTO programs (client_id, created_by, name, description)
+                VALUES (?, ?, ?, ?)
+            ''', (client_id, session['user_id'], name, description))
+            program_id = cursor.lastrowid
 
         # Add exercises
         exercise_library_ids = request.form.getlist('exercise_library_id[]')
@@ -844,24 +860,37 @@ def add_custom_exercise():
 
     db = get_db()
     try:
-        cursor = db.execute('''
-            INSERT INTO exercise_library (name, category, equipment, description, is_custom, created_by)
-            VALUES (?, ?, ?, ?, 1, ?)
-        ''', (name, category, equipment, description, session['user_id']))
+        if USE_POSTGRES:
+            cursor = db.execute('''
+                INSERT INTO exercise_library (name, category, equipment, description, is_custom, created_by)
+                VALUES (?, ?, ?, ?, 1, ?)
+                RETURNING id
+            ''', (name, category, equipment, description, session['user_id']))
+            exercise_id = cursor.fetchone()['id']
+        else:
+            cursor = db.execute('''
+                INSERT INTO exercise_library (name, category, equipment, description, is_custom, created_by)
+                VALUES (?, ?, ?, ?, 1, ?)
+            ''', (name, category, equipment, description, session['user_id']))
+            exercise_id = cursor.lastrowid
+
         db.commit()
 
         return jsonify({
             'success': True,
             'exercise': {
-                'id': cursor.lastrowid,
+                'id': exercise_id,
                 'name': name,
                 'category': category,
                 'equipment': equipment,
                 'description': description
             }
         })
-    except sqlite3.IntegrityError:
-        return jsonify({'success': False, 'message': 'Exercise already exists'}), 400
+    except Exception as e:
+        error_msg = str(e).lower()
+        if 'unique' in error_msg or 'duplicate' in error_msg:
+            return jsonify({'success': False, 'message': 'Exercise already exists'}), 400
+        return jsonify({'success': False, 'message': str(e)}), 400
 
 if __name__ == '__main__':
     # Only auto-initialize SQLite database if it doesn't exist
