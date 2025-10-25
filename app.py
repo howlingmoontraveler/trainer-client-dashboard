@@ -81,7 +81,8 @@ def init_db():
 
         # Execute statements individually
         statements = [s.strip() for s in schema.split(';') if s.strip() and not s.strip().startswith('--')]
-        for stmt in statements:
+        errors = []
+        for i, stmt in enumerate(statements):
             try:
                 # Convert ? to %s for PostgreSQL
                 stmt = stmt.replace('?', '%s')
@@ -92,9 +93,19 @@ def init_db():
                     stmt = stmt.rstrip(';') + ' ON CONFLICT (username) DO NOTHING'
                 cursor.execute(stmt)
             except Exception as e:
-                # Ignore duplicate key errors, print others
-                if 'duplicate' not in str(e).lower() and 'unique' not in str(e).lower():
-                    print(f"Error: {e}")
+                # Ignore duplicate key errors, collect others
+                error_msg = str(e).lower()
+                if 'duplicate' not in error_msg and 'unique' not in error_msg and 'already exists' not in error_msg:
+                    error_detail = f"Statement {i+1}: {str(e)}"
+                    print(f"Error executing statement {i+1}: {e}")
+                    print(f"Statement was: {stmt[:200]}")
+                    errors.append(error_detail)
+
+        # If there were critical errors, raise them
+        if errors:
+            cursor.close()
+            conn.close()
+            raise Exception(f"Database initialization failed with {len(errors)} error(s): " + "; ".join(errors[:3]))
 
         conn.commit()
         cursor.close()
