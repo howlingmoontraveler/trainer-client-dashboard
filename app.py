@@ -162,6 +162,48 @@ def logout():
     flash('You have been logged out.', 'info')
     return redirect(url_for('login'))
 
+@app.route('/change-password', methods=['GET', 'POST'])
+@login_required
+def change_password():
+    """Allow users to change their own password"""
+    if request.method == 'POST':
+        current_password = request.form['current_password']
+        new_password = request.form['new_password']
+        confirm_password = request.form['confirm_password']
+
+        # Validate inputs
+        if not current_password or not new_password or not confirm_password:
+            flash('All fields are required.', 'error')
+            return render_template('change_password.html')
+
+        if new_password != confirm_password:
+            flash('New passwords do not match.', 'error')
+            return render_template('change_password.html')
+
+        if len(new_password) < 6:
+            flash('Password must be at least 6 characters long.', 'error')
+            return render_template('change_password.html')
+
+        # Verify current password
+        db = get_db()
+        user = db.execute('SELECT * FROM users WHERE id = ?', (session['user_id'],)).fetchone()
+
+        if not user or not check_password_hash(user['password_hash'], current_password):
+            flash('Current password is incorrect.', 'error')
+            db.close()
+            return render_template('change_password.html')
+
+        # Update password
+        new_password_hash = generate_password_hash(new_password)
+        db.execute('UPDATE users SET password_hash = ? WHERE id = ?', (new_password_hash, session['user_id']))
+        db.commit()
+        db.close()
+
+        flash('Password changed successfully!', 'success')
+        return redirect(url_for('dashboard'))
+
+    return render_template('change_password.html')
+
 @app.route('/setup', methods=['GET', 'POST'])
 def setup():
     """Initialize database - one-time setup"""

@@ -5,7 +5,10 @@
 {% block content %}
 <div class="dashboard-header">
     <h1>Trainer Dashboard</h1>
-    <a href="{{ url_for('add_client') }}" class="btn btn-primary">Add New Client</a>
+    <div class="header-actions">
+        <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change Password</a>
+        <a href="{{ url_for('add_client') }}" class="btn btn-primary">Add New Client</a>
+    </div>
 </div>
 
 <div class="dashboard-grid">
