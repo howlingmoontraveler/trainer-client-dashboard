@@ -286,6 +286,77 @@ def setup():
             <button type="submit" class="btn">Initialize Database</button>
         </form>
         <p style="margin-top: 20px;"><small>After setup, login with:<br>Username: <code>trainer1</code><br>Password: <code>password123</code></small></p>
+        <p style="margin-top: 20px;"><a href="/diagnostic">Check Database Status</a></p>
+    </body>
+    </html>
+    '''
+
+@app.route('/diagnostic')
+def diagnostic():
+    """Diagnostic page to check database status"""
+    info = []
+    info.append(f"USE_POSTGRES: {USE_POSTGRES}")
+
+    if USE_POSTGRES:
+        info.append(f"DATABASE_URL set: Yes (first 50 chars: {app.config.get('DATABASE_URL', 'NOT SET')[:50]}...)")
+    else:
+        info.append(f"Using SQLite: {app.config.get('DATABASE', 'NOT SET')}")
+
+    # Try to check if tables exist
+    try:
+        db = get_db()
+
+        if USE_POSTGRES:
+            # Check PostgreSQL tables
+            result = db.execute("""
+                SELECT table_name
+                FROM information_schema.tables
+                WHERE table_schema = 'public'
+                ORDER BY table_name
+            """, ()).fetchall()
+            tables = [row['table_name'] for row in result] if result else []
+        else:
+            # Check SQLite tables
+            result = db.execute("SELECT name FROM sqlite_master WHERE type='table' ORDER BY name", ()).fetchall()
+            tables = [row['name'] for row in result] if result else []
+
+        db.close()
+
+        if tables:
+            info.append(f"Tables found: {', '.join(tables)}")
+
+            # Try to count users
+            db = get_db()
+            try:
+                user_count = db.execute("SELECT COUNT(*) as count FROM users", ()).fetchone()
+                info.append(f"Users in database: {user_count['count'] if user_count else 0}")
+            except Exception as e:
+                info.append(f"Error counting users: {str(e)}")
+            db.close()
+        else:
+            info.append("NO TABLES FOUND - Database not initialized!")
+
+    except Exception as e:
+        info.append(f"Error checking database: {str(e)}")
+        import traceback
+        info.append(f"Traceback: {traceback.format_exc()}")
+
+    return f'''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Database Diagnostic</title>
+        <style>
+            body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }}
+            h1 {{ color: #1e293b; }}
+            .info {{ background: #f0f9ff; border-left: 4px solid #3b82f6; padding: 12px; margin: 10px 0; }}
+            pre {{ background: #f5f5f5; padding: 10px; overflow-x: auto; }}
+        </style>
+    </head>
+    <body>
+        <h1>Database Diagnostic</h1>
+        {"".join([f'<div class="info">{item}</div>' for item in info])}
+        <p style="margin-top: 20px;"><a href="/setup">Go to Setup</a> | <a href="/">Go to Login</a></p>
     </body>
     </html>
     '''
