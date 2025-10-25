@@ -98,8 +98,10 @@ def init_db():
                 # Add ON CONFLICT for PostgreSQL inserts to handle duplicates
                 if 'INSERT INTO exercise_library' in stmt:
                     stmt = stmt.rstrip(';') + ' ON CONFLICT (name) DO NOTHING'
-                elif 'INSERT INTO users' in stmt and 'WHERE NOT EXISTS' not in stmt:
+                elif 'INSERT INTO users' in stmt:
                     stmt = stmt.rstrip(';') + ' ON CONFLICT (username) DO NOTHING'
+                elif 'INSERT INTO clients' in stmt:
+                    stmt = stmt.rstrip(';') + ' ON CONFLICT (trainer_id, client_id) DO NOTHING'
                 cursor.execute(stmt)
             except Exception as e:
                 # Ignore duplicate key errors, collect others

@@ -91,17 +91,14 @@ CREATE TABLE IF NOT EXISTS training_sessions (
 
 -- Insert demo data (only if not exists)
 INSERT INTO users (username, password_hash, role, full_name, email)
-SELECT 'trainer1', 'scrypt:32768:8:1$xqB1VzRnFpyUycY9$026e7ca159aede32212b0675768def409ea041148b7a95357fd936743d35042641a87ae8200d5c24435603f2957454c1c4b1399bff724df330a1b8c94b6011da', 'trainer', 'John Trainer', 'john@example.com'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'trainer1');
+VALUES ('trainer1', 'scrypt:32768:8:1$xqB1VzRnFpyUycY9$026e7ca159aede32212b0675768def409ea041148b7a95357fd936743d35042641a87ae8200d5c24435603f2957454c1c4b1399bff724df330a1b8c94b6011da', 'trainer', 'John Trainer', 'john@example.com');
 
 INSERT INTO users (username, password_hash, role, full_name, email)
-SELECT 'client1', 'scrypt:32768:8:1$br49hJ2xTt3N3OhS$85a9c62b271e6d1c8c05dd2457be3452ec2068f9904a61df9396e95953db2a6cc0ad6e77b70deba85f103068761411bd83a618e882f1be8254a78cbd8343a918', 'client', 'Jane Client', 'jane@example.com'
-WHERE NOT EXISTS (SELECT 1 FROM users WHERE username = 'client1');
+VALUES ('client1', 'scrypt:32768:8:1$br49hJ2xTt3N3OhS$85a9c62b271e6d1c8c05dd2457be3452ec2068f9904a61df9396e95953db2a6cc0ad6e77b70deba85f103068761411bd83a618e882f1be8254a78cbd8343a918', 'client', 'Jane Client', 'jane@example.com');
 
 -- Link client to trainer (only if not exists)
 INSERT INTO clients (trainer_id, client_id)
-SELECT 1, 2
-WHERE NOT EXISTS (SELECT 1 FROM clients WHERE trainer_id = 1 AND client_id = 2);
+VALUES (1, 2);
 
 -- Populate Exercise Library (only if empty)
 INSERT INTO exercise_library (name, category, equipment, description) VALUES
