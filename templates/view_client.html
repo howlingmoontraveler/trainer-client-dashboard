@@ -8,6 +8,7 @@
     <div class="header-actions">
         <a href="{{ url_for('create_program', client_id=client.id) }}" class="btn btn-primary">Create Program</a>
         <a href="{{ url_for('schedule_session', client_id=client.id) }}" class="btn btn-info">Schedule Session</a>
+        <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Client</button>
         <a href="{{ url_for('trainer_dashboard') }}" class="btn btn-secondary">Back</a>
     </div>
 </div>
@@ -50,7 +51,17 @@ function closeResetPasswordModal() {
     document.getElementById('resetPasswordModal').style.display = 'none';
     document.getElementById('new_password').value = '';
 }
+
+function confirmDelete() {
+    if (confirm('Are you sure you want to delete {{ client.full_name }}?\n\nThis will permanently delete:\n- All programs\n- All exercises\n- All training sessions\n- All workout logs\n- The client account\n\nThis action cannot be undone!')) {
+        document.getElementById('deleteForm').submit();
+    }
+}
 </script>
+
+<!-- Delete Form (hidden) -->
+<form id="deleteForm" method="POST" action="{{ url_for('delete_client', client_id=client.id) }}" style="display: none;">
+</form>
 
 <div class="dashboard-grid">
     <div class="card">

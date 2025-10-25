@@ -793,6 +793,70 @@ def reset_client_password(client_id):
     flash(f'Password reset successfully for {client["full_name"]}. New password: {new_password}', 'success')
     return redirect(url_for('view_client', client_id=client_id))
 
+@app.route('/trainer/client/<int:client_id>/delete', methods=['POST'])
+@login_required
+@trainer_required
+def delete_client(client_id):
+    """Delete a client and all associated data"""
+    db = get_db()
+
+    # Verify client belongs to this trainer
+    client = db.execute('''
+        SELECT u.id, u.full_name
+        FROM users u
+        JOIN clients c ON u.id = c.client_id
+        WHERE c.trainer_id = ? AND u.id = ?
+    ''', (session['user_id'], client_id)).fetchone()
+
+    if not client:
+        flash('Client not found.', 'error')
+        return redirect(url_for('trainer_dashboard'))
+
+    client_name = client['full_name']
+
+    try:
+        # Delete all related data in correct order (respecting foreign key constraints)
+
+        # 1. Get all program IDs for this client
+        programs = db.execute('SELECT id FROM programs WHERE client_id = ?', (client_id,)).fetchall()
+        program_ids = [p['id'] for p in programs]
+
+        if program_ids:
+            # 2. Delete workout logs (references exercises)
+            placeholders = ','.join(['?' for _ in program_ids])
+            db.execute(f'''
+                DELETE FROM workout_logs
+                WHERE exercise_id IN (
+                    SELECT id FROM exercises WHERE program_id IN ({placeholders})
+                )
+            ''', program_ids)
+
+            # 3. Delete exercises (references programs)
+            db.execute(f'DELETE FROM exercises WHERE program_id IN ({placeholders})', program_ids)
+
+        # 4. Delete programs
+        db.execute('DELETE FROM programs WHERE client_id = ?', (client_id,))
+
+        # 5. Delete training sessions
+        db.execute('DELETE FROM training_sessions WHERE client_id = ?', (client_id,))
+
+        # 6. Delete client-trainer relationship
+        db.execute('DELETE FROM clients WHERE client_id = ?', (client_id,))
+
+        # 7. Delete user account
+        db.execute('DELETE FROM users WHERE id = ?', (client_id,))
+
+        db.commit()
+        db.close()
+
+        flash(f'Client {client_name} and all associated data have been permanently deleted.', 'success')
+        return redirect(url_for('trainer_dashboard'))
+
+    except Exception as e:
+        db.close()
+        flash(f'Error deleting client: {str(e)}', 'error')
+        return redirect(url_for('view_client', client_id=client_id))
+
 @app.route('/api/log_workout', methods=['POST'])
 @login_required
 def log_workout():
