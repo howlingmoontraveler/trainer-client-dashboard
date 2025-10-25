@@ -47,19 +47,22 @@ def get_db():
 class PostgresDB:
     def __init__(self, conn):
         self.conn = conn
-        self.cursor = conn.cursor()
+        self._cursor = None
 
     def execute(self, query, params=()):
         # Convert SQLite ? to PostgreSQL %s
         query = query.replace('?', '%s')
-        self.cursor.execute(query, params)
-        return self.cursor
+        # Create a new cursor for each execute to avoid reuse issues
+        self._cursor = self.conn.cursor()
+        self._cursor.execute(query, params)
+        return self._cursor
 
     def commit(self):
         self.conn.commit()
 
     def close(self):
-        self.cursor.close()
+        if self._cursor:
+            self._cursor.close()
         self.conn.close()
 
 def init_db():
