@@ -5,7 +5,10 @@
 {% block content %}
 <div class="dashboard-header">
     <h1>My Workout Programs</h1>
-    <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change Password</a>
+    <div class="header-actions">
+        <a href="{{ url_for('create_own_program') }}" class="btn btn-primary">Create My Own Program</a>
+        <a href="{{ url_for('change_password') }}" class="btn btn-secondary">Change Password</a>
+    </div>
 </div>
 
 <div class="dashboard-grid">
@@ -16,9 +19,22 @@
             {% for program in programs %}
             <div class="program-item">
                 <div class="program-info">
-                    <h3>{{ program.name }}</h3>
+                    <div class="program-header">
+                        <h3>{{ program.name }}</h3>
+                        {% if program.is_self_created %}
+                        <span class="badge badge-self-created">My Program</span>
+                        {% else %}
+                        <span class="badge badge-trainer">Trainer Assigned</span>
+                        {% endif %}
+                    </div>
                     <p>{{ program.description }}</p>
-                    <p class="text-muted">Created by: {{ program.trainer_name }}</p>
+                    <p class="text-muted">
+                        {% if program.is_self_created %}
+                        Created by: Me
+                        {% else %}
+                        Created by: {{ program.trainer_name }}
+                        {% endif %}
+                    </p>
                     <p class="text-muted">Date: {{ program.created_at.strftime('%Y-%m-%d') if program.created_at.strftime is defined else program.created_at[:10] }}</p>
                 </div>
                 <div class="program-actions">
@@ -55,4 +71,27 @@
         {% endif %}
     </div>
 </div>
+
+<style>
+.program-header {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+    margin-bottom: 0.5rem;
+}
+
+.program-header h3 {
+    margin: 0;
+}
+
+.badge-self-created {
+    background: var(--accent-color);
+    color: white;
+}
+
+.badge-trainer {
+    background: var(--primary-color);
+    color: white;
+}
+</style>
 {% endblock %}

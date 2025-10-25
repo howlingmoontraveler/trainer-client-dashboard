@@ -559,9 +559,10 @@ def trainer_dashboard():
 def client_dashboard():
     db = get_db()
 
-    # Get client's programs
+    # Get client's programs (both trainer-assigned and self-created)
     programs = db.execute('''
-        SELECT p.id, p.name, p.description, p.created_at, u.full_name as trainer_name
+        SELECT p.id, p.name, p.description, p.created_at, p.created_by, u.full_name as trainer_name,
+               CASE WHEN p.created_by = p.client_id THEN 1 ELSE 0 END as is_self_created
         FROM programs p
         JOIN users u ON p.created_by = u.id
         WHERE p.client_id = ?
@@ -843,6 +844,75 @@ def create_program(client_id):
     ''').fetchall()
 
     return render_template('create_program.html', client=client, exercises_library=exercises_library)
+
+@app.route('/client/programs/create', methods=['GET', 'POST'])
+@login_required
+def create_own_program():
+    """Allow clients to create their own workout programs"""
+    if session['role'] != 'client':
+        flash('Only clients can create their own programs.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = get_db()
+
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+
+        if USE_POSTGRES:
+            cursor = db.execute('''
+                INSERT INTO programs (client_id, created_by, name, description)
+                VALUES (?, ?, ?, ?)
+                RETURNING id
+            ''', (session['user_id'], session['user_id'], name, description))
+            program_id = cursor.fetchone()['id']
+        else:
+            cursor = db.execute('''
+                INSERT INTO programs (client_id, created_by, name, description)
+                VALUES (?, ?, ?, ?)
+            ''', (session['user_id'], session['user_id'], name, description))
+            program_id = cursor.lastrowid
+
+        # Add exercises with all new fields
+        exercise_library_ids = request.form.getlist('exercise_library_id[]')
+        exercise_names = request.form.getlist('exercise_name[]')
+        exercise_sets = request.form.getlist('exercise_sets[]')
+        exercise_reps = request.form.getlist('exercise_reps[]')
+        exercise_weights = request.form.getlist('exercise_weight[]')
+        exercise_durations = request.form.getlist('exercise_duration[]')
+        exercise_rests = request.form.getlist('exercise_rest[]')
+        exercise_tempos = request.form.getlist('exercise_tempo[]')
+        exercise_notes = request.form.getlist('exercise_notes[]')
+
+        for i, name in enumerate(exercise_names):
+            if name.strip():
+                library_id = exercise_library_ids[i] if i < len(exercise_library_ids) and exercise_library_ids[i] else None
+                weight = exercise_weights[i] if i < len(exercise_weights) else ''
+                duration = exercise_durations[i] if i < len(exercise_durations) else ''
+                rest_period = exercise_rests[i] if i < len(exercise_rests) else ''
+                tempo = exercise_tempos[i] if i < len(exercise_tempos) else ''
+
+                db.execute('''
+                    INSERT INTO exercises (program_id, exercise_library_id, name, sets, reps, weight, notes, exercise_order, tempo, rest_period)
+                    VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                ''', (program_id, library_id, name, exercise_sets[i], exercise_reps[i], weight, exercise_notes[i], i + 1, tempo, rest_period))
+
+        db.commit()
+        db.close()
+        flash('Program created successfully!', 'success')
+        return redirect(url_for('client_dashboard'))
+
+    # Get all exercises from library for dropdown
+    exercises_library = db.execute('''
+        SELECT id, name, category, equipment, description
+        FROM exercise_library
+        ORDER BY category, name
+    ''').fetchall()
+
+    db.close()
+
+    return render_template('create_own_program.html', exercises_library=exercises_library)
+
 
 @app.route('/trainer/client/<int:client_id>')
 @login_required
