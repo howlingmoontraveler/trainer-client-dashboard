@@ -7,7 +7,7 @@
     <div>
         <h1>{{ program.name }}</h1>
         <p class="program-description">{{ program.description }}</p>
-        <p class="text-muted">Created: {{ program.created_at[:10] }}</p>
+        <p class="text-muted">Created: {{ program.created_at.strftime('%Y-%m-%d') if program.created_at.strftime is defined else program.created_at[:10] }}</p>
     </div>
     <div class="header-actions">
         {% if session.role == 'trainer' %}

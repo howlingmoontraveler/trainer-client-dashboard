@@ -16,7 +16,7 @@
     <h3>Login Credentials</h3>
     <p><strong>Username:</strong> <code style="background-color: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">{{ client.username }}</code></p>
     <p><strong>Email:</strong> {{ client.email }}</p>
-    <p><strong>Member Since:</strong> {{ client.created_at[:10] }}</p>
+    <p><strong>Member Since:</strong> {{ client.created_at.strftime('%Y-%m-%d') if client.created_at.strftime is defined else client.created_at[:10] }}</p>
     <p class="text-muted" style="margin-top: 1rem;">
         <strong>Login URL:</strong> Share this link with your client:<br>
         <code style="background-color: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">{{ request.url_root }}</code>
@@ -61,7 +61,7 @@ function closeResetPasswordModal() {
             <div class="program-item">
                 <h3>{{ program.name }}</h3>
                 <p>{{ program.description }}</p>
-                <p class="text-muted">Created: {{ program.created_at[:10] }}</p>
+                <p class="text-muted">Created: {{ program.created_at.strftime('%Y-%m-%d') if program.created_at.strftime is defined else program.created_at[:10] }}</p>
                 <a href="{{ url_for('view_program', program_id=program.id) }}" class="btn btn-sm">View Details</a>
             </div>
             {% endfor %}
@@ -78,7 +78,7 @@ function closeResetPasswordModal() {
             {% for session in sessions %}
             <div class="session-item">
                 <div class="session-date">
-                    <strong>{{ session.session_date[:10] }}</strong>
+                    <strong>{{ session.session_date.strftime('%Y-%m-%d') if session.session_date.strftime is defined else session.session_date[:10] }}</strong>
                     <span class="badge badge-{{ session.status }}">{{ session.status }}</span>
                 </div>
                 <p><strong>Duration:</strong> {{ session.duration }} minutes</p>

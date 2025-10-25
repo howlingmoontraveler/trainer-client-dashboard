@@ -19,7 +19,7 @@
                     <h3>{{ program.name }}</h3>
                     <p>{{ program.description }}</p>
                     <p class="text-muted">Created by: {{ program.trainer_name }}</p>
-                    <p class="text-muted">Date: {{ program.created_at[:10] }}</p>
+                    <p class="text-muted">Date: {{ program.created_at.strftime('%Y-%m-%d') if program.created_at.strftime is defined else program.created_at[:10] }}</p>
                 </div>
                 <div class="program-actions">
                     <a href="{{ url_for('view_program', program_id=program.id) }}" class="btn btn-primary">View Program</a>
@@ -39,7 +39,7 @@
             {% for session in sessions %}
             <div class="session-item">
                 <div class="session-date">
-                    <strong>{{ session.session_date[:10] }}</strong>
+                    <strong>{{ session.session_date.strftime('%Y-%m-%d') if session.session_date.strftime is defined else session.session_date[:10] }}</strong>
                     <span class="badge badge-{{ session.status }}">{{ session.status }}</span>
                 </div>
                 <p><strong>Trainer:</strong> {{ session.trainer_name }}</p>
