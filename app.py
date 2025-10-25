@@ -73,19 +73,18 @@ def init_db():
         schema = schema.replace('AUTOINCREMENT', '')
         schema = schema.replace('BOOLEAN DEFAULT 0', 'BOOLEAN DEFAULT FALSE')
         schema = schema.replace('DATETIME', 'TIMESTAMP')
-        # Add ON CONFLICT for duplicate handling
-        schema = schema.replace(
-            'INSERT INTO exercise_library (name, category, equipment, description) VALUES',
-            'INSERT INTO exercise_library (name, category, equipment, description) VALUES'
-        )
 
-        conn = get_db()
+        import psycopg
+        from psycopg.rows import dict_row
+        conn = psycopg.connect(app.config['DATABASE_URL'], row_factory=dict_row)
         cursor = conn.cursor()
 
         # Execute statements individually
         statements = [s.strip() for s in schema.split(';') if s.strip() and not s.strip().startswith('--')]
         for stmt in statements:
             try:
+                # Convert ? to %s for PostgreSQL
+                stmt = stmt.replace('?', '%s')
                 # Add ON CONFLICT for PostgreSQL inserts to handle duplicates
                 if 'INSERT INTO exercise_library' in stmt:
                     stmt = stmt.rstrip(';') + ' ON CONFLICT (name) DO NOTHING'
