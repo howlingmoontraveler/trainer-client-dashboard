@@ -12,10 +12,26 @@ app.secret_key = os.environ.get('SECRET_KEY', os.urandom(24))
 DATABASE_URL = os.environ.get('DATABASE_URL')
 USE_POSTGRES = DATABASE_URL is not None
 
+# Try importing psycopg2, gracefully fall back to SQLite if not available
 if USE_POSTGRES:
-    app.config['DATABASE_URL'] = DATABASE_URL.replace('postgres://', 'postgresql://', 1) if DATABASE_URL.startswith('postgres://') else DATABASE_URL
+    try:
+        import psycopg2
+        import psycopg2.extras
+        app.config['DATABASE_URL'] = DATABASE_URL.replace('postgres://', 'postgresql://', 1) if DATABASE_URL.startswith('postgres://') else DATABASE_URL
+        print("Using PostgreSQL database")
+    except ImportError as e:
+        print("=" * 60)
+        print("WARNING: PostgreSQL configured but psycopg2 not available")
+        print(f"Error: {e}")
+        print("This is likely due to Python 3.13 incompatibility with psycopg2")
+        print("FALLING BACK TO SQLITE - Data will NOT persist across restarts!")
+        print("To fix: Remove DATABASE_URL env var OR ensure Python 3.12 is used")
+        print("=" * 60)
+        USE_POSTGRES = False
+        app.config['DATABASE'] = 'trainer_dashboard.db'
 else:
     app.config['DATABASE'] = 'trainer_dashboard.db'
+    print("Using SQLite database (data will not persist on Render)")
 
 # Database helper functions
 def get_db():
