@@ -221,11 +221,47 @@ def setup():
     """Initialize database - one-time setup"""
     if request.method == 'POST':
         try:
+            print("=" * 60)
+            print("Starting database initialization...")
+            print(f"USE_POSTGRES: {USE_POSTGRES}")
+            if USE_POSTGRES:
+                print(f"DATABASE_URL configured: {app.config.get('DATABASE_URL', 'NOT SET')[:50]}...")
             init_db()
+            print("Database initialization completed successfully!")
+            print("=" * 60)
             flash('Database initialized successfully! You can now log in with username: trainer1, password: password123', 'success')
             return redirect(url_for('login'))
         except Exception as e:
+            import traceback
+            error_detail = traceback.format_exc()
+            print("=" * 60)
+            print("ERROR during database initialization:")
+            print(error_detail)
+            print("=" * 60)
             flash(f'Error initializing database: {str(e)}', 'error')
+            return f'''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Setup Error</title>
+                <style>
+                    body {{ font-family: Arial, sans-serif; max-width: 800px; margin: 50px auto; padding: 20px; }}
+                    h1 {{ color: #ef4444; }}
+                    .error {{ background: #fee2e2; border-left: 4px solid #ef4444; padding: 12px; margin: 20px 0; }}
+                    pre {{ background: #f5f5f5; padding: 10px; overflow-x: auto; }}
+                </style>
+            </head>
+            <body>
+                <h1>Database Initialization Failed</h1>
+                <div class="error">
+                    <strong>Error:</strong> {str(e)}
+                </div>
+                <h3>Full Error Details:</h3>
+                <pre>{error_detail}</pre>
+                <a href="/setup">Try Again</a>
+            </body>
+            </html>
+            '''
 
     return '''
     <!DOCTYPE html>
