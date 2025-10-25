@@ -11,16 +11,58 @@
     </div>
 </div>
 
+<!-- Quick Stats -->
+<div class="stats-grid">
+    <div class="stat-card">
+        <div class="stat-icon">👥</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ clients|length }}</div>
+            <div class="stat-label">Active Clients</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">📅</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ sessions|length }}</div>
+            <div class="stat-label">Upcoming Sessions</div>
+        </div>
+    </div>
+    <div class="stat-card">
+        <div class="stat-icon">💪</div>
+        <div class="stat-content">
+            <div class="stat-value">{{ total_programs }}</div>
+            <div class="stat-label">Active Programs</div>
+        </div>
+    </div>
+</div>
+
 <div class="dashboard-grid">
     <div class="card">
-        <h2>My Clients</h2>
+        <div class="card-header-with-search">
+            <h2>My Clients</h2>
+            {% if clients %}
+            <div class="search-filter-container">
+                <input type="text" id="clientSearch" placeholder="Search clients..." class="search-input">
+                <select id="fitnessFilter" class="filter-select">
+                    <option value="">All Levels</option>
+                    <option value="Beginner">Beginner</option>
+                    <option value="Intermediate">Intermediate</option>
+                    <option value="Advanced">Advanced</option>
+                    <option value="Elite">Elite</option>
+                </select>
+            </div>
+            {% endif %}
+        </div>
         {% if clients %}
-        <div class="client-list">
+        <div class="client-list" id="clientList">
             {% for client in clients %}
-            <div class="client-item">
+            <div class="client-item" data-name="{{ client.full_name|lower }}" data-email="{{ client.email|lower if client.email else '' }}" data-level="{{ client.fitness_level or '' }}">
                 <div class="client-info">
                     <h3>{{ client.full_name }}</h3>
-                    <p>{{ client.email }}</p>
+                    <p>{{ client.email or 'No email' }}</p>
+                    {% if client.fitness_level %}
+                    <span class="badge badge-{{ client.fitness_level|lower }}">{{ client.fitness_level }}</span>
+                    {% endif %}
                     <p class="text-muted">Member since: {{ client.created_at.strftime('%Y-%m-%d') if client.created_at.strftime is defined else client.created_at[:10] }}</p>
                 </div>
                 <div class="client-actions">
@@ -30,6 +72,9 @@
                 </div>
             </div>
             {% endfor %}
+        </div>
+        <div id="noResults" style="display: none;" class="empty-state">
+            No clients match your search criteria.
         </div>
         {% else %}
         <p class="empty-state">No clients yet. Add your first client to get started!</p>
@@ -56,4 +101,172 @@
         {% endif %}
     </div>
 </div>
+
+<style>
+/* Stats Grid */
+.stats-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(200px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.stat-card {
+    background: white;
+    border-radius: 12px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.stat-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0,0,0,0.15);
+}
+
+.stat-icon {
+    font-size: 2.5rem;
+    line-height: 1;
+}
+
+.stat-value {
+    font-size: 2rem;
+    font-weight: bold;
+    color: var(--primary-color);
+    line-height: 1;
+}
+
+.stat-label {
+    color: var(--gray-600);
+    font-size: 0.9rem;
+    margin-top: 0.25rem;
+}
+
+/* Search and Filter */
+.card-header-with-search {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    gap: 1rem;
+}
+
+.search-filter-container {
+    display: flex;
+    gap: 0.75rem;
+    flex: 1;
+    max-width: 500px;
+}
+
+.search-input {
+    flex: 1;
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    font-size: 0.95rem;
+}
+
+.search-input:focus {
+    outline: none;
+    border-color: var(--primary-color);
+    box-shadow: 0 0 0 3px rgba(13, 148, 136, 0.1);
+}
+
+.filter-select {
+    padding: 0.5rem 1rem;
+    border: 1px solid var(--gray-300);
+    border-radius: 8px;
+    font-size: 0.95rem;
+    background: white;
+    cursor: pointer;
+}
+
+.filter-select:focus {
+    outline: none;
+    border-color: var(--primary-color);
+}
+
+/* Badge Styles for Fitness Levels */
+.badge-beginner {
+    background: #dbeafe;
+    color: #1e40af;
+}
+
+.badge-intermediate {
+    background: #d1fae5;
+    color: #065f46;
+}
+
+.badge-advanced {
+    background: #fed7aa;
+    color: #9a3412;
+}
+
+.badge-elite {
+    background: #e9d5ff;
+    color: #6b21a8;
+}
+
+@media (max-width: 768px) {
+    .card-header-with-search {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
+    .search-filter-container {
+        max-width: none;
+    }
+}
+</style>
+
+<script>
+// Client Search and Filter
+document.addEventListener('DOMContentLoaded', function() {
+    const searchInput = document.getElementById('clientSearch');
+    const fitnessFilter = document.getElementById('fitnessFilter');
+    const clientList = document.getElementById('clientList');
+    const noResults = document.getElementById('noResults');
+
+    if (!searchInput || !fitnessFilter || !clientList) return;
+
+    function filterClients() {
+        const searchTerm = searchInput.value.toLowerCase();
+        const selectedLevel = fitnessFilter.value;
+        const clientItems = clientList.querySelectorAll('.client-item');
+        let visibleCount = 0;
+
+        clientItems.forEach(item => {
+            const name = item.getAttribute('data-name');
+            const email = item.getAttribute('data-email');
+            const level = item.getAttribute('data-level');
+
+            const matchesSearch = name.includes(searchTerm) || email.includes(searchTerm);
+            const matchesLevel = !selectedLevel || level === selectedLevel;
+
+            if (matchesSearch && matchesLevel) {
+                item.style.display = '';
+                visibleCount++;
+            } else {
+                item.style.display = 'none';
+            }
+        });
+
+        // Show/hide no results message
+        if (visibleCount === 0) {
+            clientList.style.display = 'none';
+            noResults.style.display = 'block';
+        } else {
+            clientList.style.display = '';
+            noResults.style.display = 'none';
+        }
+    }
+
+    searchInput.addEventListener('input', filterClients);
+    fitnessFilter.addEventListener('change', filterClients);
+});
+</script>
 {% endblock %}

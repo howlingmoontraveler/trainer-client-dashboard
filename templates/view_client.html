@@ -6,6 +6,7 @@
 <div class="client-detail-header">
     <h1>{{ client.full_name }}</h1>
     <div class="header-actions">
+        <a href="{{ url_for('edit_client', client_id=client.id) }}" class="btn btn-secondary">Edit Profile</a>
         <a href="{{ url_for('create_program', client_id=client.id) }}" class="btn btn-primary">Create Program</a>
         <a href="{{ url_for('schedule_session', client_id=client.id) }}" class="btn btn-info">Schedule Session</a>
         <button type="button" class="btn btn-danger" onclick="confirmDelete()">Delete Client</button>
@@ -13,17 +14,75 @@
     </div>
 </div>
 
-<div class="client-info-card">
-    <h3>Login Credentials</h3>
-    <p><strong>Username:</strong> <code style="background-color: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">{{ client.username }}</code></p>
-    <p><strong>Email:</strong> {{ client.email }}</p>
-    <p><strong>Member Since:</strong> {{ client.created_at.strftime('%Y-%m-%d') if client.created_at.strftime is defined else client.created_at[:10] }}</p>
-    <p class="text-muted" style="margin-top: 1rem;">
-        <strong>Login URL:</strong> Share this link with your client:<br>
-        <code style="background-color: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">{{ request.url_root }}</code>
-    </p>
-    <button type="button" class="btn btn-sm btn-info" onclick="showResetPasswordModal()" style="margin-top: 1rem;">Reset Password</button>
+<div class="client-info-grid">
+    <div class="client-info-card">
+        <h3>Contact Information</h3>
+        <p><strong>Email:</strong> {{ client.email or 'Not provided' }}</p>
+        <p><strong>Phone:</strong> {{ client.phone or 'Not provided' }}</p>
+        <p><strong>Member Since:</strong> {{ client.created_at.strftime('%Y-%m-%d') if client.created_at.strftime is defined else client.created_at[:10] }}</p>
+    </div>
+
+    <div class="client-info-card">
+        <h3>Login Credentials</h3>
+        <p><strong>Username:</strong> <code style="background-color: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace;">{{ client.username }}</code></p>
+        <p class="text-muted" style="margin-top: 0.5rem;">
+            <strong>Login URL:</strong><br>
+            <code style="background-color: var(--gray-100); padding: 0.25rem 0.5rem; border-radius: 4px; font-family: monospace; font-size: 0.85rem;">{{ request.url_root }}</code>
+        </p>
+        <button type="button" class="btn btn-sm btn-info" onclick="showResetPasswordModal()" style="margin-top: 1rem;">Reset Password</button>
+    </div>
+
+    <div class="client-info-card">
+        <h3>Fitness Profile</h3>
+        <p><strong>Fitness Level:</strong> {{ client.fitness_level or 'Not specified' }}</p>
+        <p><strong>Goals:</strong></p>
+        <p class="client-notes">{{ client.goals or 'No goals specified yet' }}</p>
+    </div>
+
+    {% if client.medical_notes %}
+    <div class="client-info-card medical-alert">
+        <h3>⚠️ Medical Considerations</h3>
+        <p class="client-notes">{{ client.medical_notes }}</p>
+    </div>
+    {% endif %}
 </div>
+
+<style>
+.client-info-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.client-info-card {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.client-info-card h3 {
+    margin-bottom: 1rem;
+    color: var(--navy);
+    font-size: 1.1rem;
+}
+
+.client-notes {
+    color: var(--gray-600);
+    line-height: 1.6;
+    white-space: pre-wrap;
+}
+
+.medical-alert {
+    border-left: 4px solid var(--danger);
+    background: #fef2f2;
+}
+
+.medical-alert h3 {
+    color: var(--danger);
+}
+</style>
 
 <!-- Reset Password Modal -->
 <div id="resetPasswordModal" class="modal" style="display: none;">

@@ -1,0 +1,72 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Client Profile{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Edit Client Profile: {{ client.full_name }}</h1>
+
+    <form method="POST" action="{{ url_for('edit_client', client_id=client.id) }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="full_name">Full Name *</label>
+                <input type="text" id="full_name" name="full_name" value="{{ client.full_name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="email">Email</label>
+                <input type="email" id="email" name="email" value="{{ client.email or '' }}">
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="phone">Phone Number</label>
+                <input type="tel" id="phone" name="phone" value="{{ client.phone or '' }}" placeholder="(555) 123-4567">
+            </div>
+
+            <div class="form-group">
+                <label for="fitness_level">Fitness Level</label>
+                <select id="fitness_level" name="fitness_level">
+                    <option value="">Select Level</option>
+                    <option value="Beginner" {% if client.fitness_level == 'Beginner' %}selected{% endif %}>Beginner</option>
+                    <option value="Intermediate" {% if client.fitness_level == 'Intermediate' %}selected{% endif %}>Intermediate</option>
+                    <option value="Advanced" {% if client.fitness_level == 'Advanced' %}selected{% endif %}>Advanced</option>
+                    <option value="Elite" {% if client.fitness_level == 'Elite' %}selected{% endif %}>Elite</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="goals">Goals</label>
+            <textarea id="goals" name="goals" rows="3" placeholder="e.g., Lose 20 lbs, Build muscle, Improve endurance, Train for marathon">{{ client.goals or '' }}</textarea>
+            <small>What does this client want to achieve?</small>
+        </div>
+
+        <div class="form-group">
+            <label for="medical_notes">Medical Considerations</label>
+            <textarea id="medical_notes" name="medical_notes" rows="3" placeholder="e.g., Previous injuries, medical conditions, physical limitations, allergies">{{ client.medical_notes or '' }}</textarea>
+            <small>Any medical conditions, injuries, or limitations to be aware of</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

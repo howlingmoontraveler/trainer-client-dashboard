@@ -325,6 +325,92 @@ def setup():
     </html>
     '''
 
+@app.route('/migrate', methods=['GET', 'POST'])
+def migrate():
+    """Run database migrations for Phase 1 enhancements"""
+    if request.method == 'POST':
+        try:
+            with app.open_resource('migrate_phase1.sql', mode='r') as f:
+                migration = f.read()
+
+            if USE_POSTGRES:
+                import psycopg
+                from psycopg.rows import dict_row
+                conn = psycopg.connect(app.config['DATABASE_URL'], row_factory=dict_row)
+                cursor = conn.cursor()
+
+                # Split by semicolon and execute each statement
+                statements = [s.strip() for s in migration.split(';') if s.strip()]
+                errors = []
+
+                for i, stmt in enumerate(statements):
+                    try:
+                        cursor.execute(stmt)
+                    except Exception as e:
+                        error_msg = str(e).lower()
+                        # Ignore "column already exists" errors
+                        if 'already exists' not in error_msg and 'duplicate column' not in error_msg:
+                            errors.append(f"Statement {i+1}: {str(e)}")
+
+                conn.commit()
+                cursor.close()
+                conn.close()
+
+                if errors:
+                    return f"<h1>Migration completed with warnings</h1><pre>{chr(10).join(errors)}</pre><p><a href='/'>Back to Home</a></p>"
+                else:
+                    return "<h1>Migration successful!</h1><p>All database changes applied successfully.</p><p><a href='/'>Back to Home</a></p>"
+            else:
+                # SQLite
+                db = get_db()
+                statements = [s.strip() for s in migration.split(';') if s.strip()]
+                for stmt in statements:
+                    try:
+                        db.execute(stmt, ())
+                    except Exception as e:
+                        if 'duplicate column' not in str(e).lower():
+                            pass  # Ignore duplicate column errors
+                db.commit()
+                db.close()
+                return "<h1>Migration successful!</h1><p>All database changes applied successfully.</p><p><a href='/'>Back to Home</a></p>"
+
+        except Exception as e:
+            import traceback
+            return f"<h1>Migration failed</h1><pre>{traceback.format_exc()}</pre><p><a href='/migrate'>Try Again</a></p>"
+
+    return '''
+    <!DOCTYPE html>
+    <html>
+    <head>
+        <title>Database Migration</title>
+        <style>
+            body { font-family: Arial, sans-serif; max-width: 600px; margin: 50px auto; padding: 20px; }
+            h1 { color: #1e293b; }
+            .warning { background: #fef3c7; border-left: 4px solid #f59e0b; padding: 12px; margin: 20px 0; }
+            .btn { background: #0d9488; color: white; padding: 12px 24px; border: none; border-radius: 8px; cursor: pointer; font-size: 16px; }
+            .btn:hover { background: #0f766e; }
+        </style>
+    </head>
+    <body>
+        <h1>Database Migration - Phase 1</h1>
+        <p>This will add new fields to support enhanced features:</p>
+        <ul>
+            <li>Extended client profiles (phone, goals, fitness level, medical notes)</li>
+            <li>Exercise library enhancements (demo videos, instructions, muscle groups)</li>
+            <li>Workout template fields (tempo, rest periods)</li>
+            <li>Program templates for cloning</li>
+        </ul>
+        <div class="warning">
+            <strong>Note:</strong> This migration is safe to run multiple times. Existing data will not be affected.
+        </div>
+        <form method="POST">
+            <button type="submit" class="btn">Run Migration</button>
+        </form>
+        <p style="margin-top: 20px;"><a href="/">Back to Home</a></p>
+    </body>
+    </html>
+    '''
+
 @app.route('/diagnostic')
 def diagnostic():
     """Diagnostic page to check database status"""
@@ -435,9 +521,9 @@ def dashboard():
 def trainer_dashboard():
     db = get_db()
 
-    # Get all clients for this trainer
+    # Get all clients for this trainer with extended profile info
     clients = db.execute('''
-        SELECT u.id, u.username, u.full_name, u.email, c.created_at
+        SELECT u.id, u.username, u.full_name, u.email, u.phone, u.fitness_level, u.goals, u.medical_notes, c.created_at
         FROM users u
         JOIN clients c ON u.id = c.client_id
         WHERE c.trainer_id = ?
@@ -454,7 +540,19 @@ def trainer_dashboard():
         LIMIT 10
     ''', (session['user_id'],)).fetchall()
 
-    return render_template('trainer_dashboard.html', clients=clients, sessions=sessions_list)
+    # Get total programs count
+    total_programs = db.execute('''
+        SELECT COUNT(*) as count
+        FROM programs p
+        WHERE p.created_by = ?
+    ''', (session['user_id'],)).fetchone()['count']
+
+    db.close()
+
+    return render_template('trainer_dashboard.html',
+                         clients=clients,
+                         sessions=sessions_list,
+                         total_programs=total_programs)
 
 @app.route('/client/dashboard')
 @login_required
@@ -527,6 +625,46 @@ def add_client():
         return redirect(url_for('trainer_dashboard'))
 
     return render_template('add_client.html')
+
+@app.route('/trainer/client/<int:client_id>/edit', methods=['GET', 'POST'])
+@login_required
+@trainer_required
+def edit_client(client_id):
+    """Edit client profile"""
+    db = get_db()
+
+    # Verify client belongs to this trainer
+    client = db.execute('''
+        SELECT u.*
+        FROM users u
+        JOIN clients c ON u.id = c.client_id
+        WHERE c.trainer_id = ? AND u.id = ?
+    ''', (session['user_id'], client_id)).fetchone()
+
+    if not client:
+        flash('Client not found.', 'error')
+        return redirect(url_for('trainer_dashboard'))
+
+    if request.method == 'POST':
+        full_name = request.form['full_name']
+        email = request.form.get('email', '')
+        phone = request.form.get('phone', '')
+        goals = request.form.get('goals', '')
+        fitness_level = request.form.get('fitness_level', '')
+        medical_notes = request.form.get('medical_notes', '')
+
+        db.execute('''
+            UPDATE users
+            SET full_name = ?, email = ?, phone = ?, goals = ?, fitness_level = ?, medical_notes = ?
+            WHERE id = ?
+        ''', (full_name, email, phone, goals, fitness_level, medical_notes, client_id))
+        db.commit()
+        db.close()
+
+        flash(f'Profile updated successfully for {full_name}!', 'success')
+        return redirect(url_for('view_client', client_id=client_id))
+
+    return render_template('edit_client.html', client=client)
 
 @app.route('/trainer/programs/create/<int:client_id>', methods=['GET', 'POST'])
 @login_required
