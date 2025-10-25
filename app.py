@@ -167,8 +167,11 @@ def login():
         password = request.form['password']
 
         try:
+            print(f"Login attempt for username: {username}")
             db = get_db()
+            print(f"Database connection established, USE_POSTGRES={USE_POSTGRES}")
             user = db.execute('SELECT * FROM users WHERE username = ?', (username,)).fetchone()
+            print(f"User query result: {user}")
             db.close()
 
             if user and check_password_hash(user['password_hash'], password):
@@ -179,9 +182,15 @@ def login():
                 flash('Login successful!', 'success')
                 return redirect(url_for('dashboard'))
             else:
+                print(f"Login failed - user exists: {user is not None}")
                 flash('Invalid username or password.', 'error')
         except Exception as e:
             # Database not initialized or connection error
+            import traceback
+            print("=" * 60)
+            print(f"LOGIN ERROR: {e}")
+            print(traceback.format_exc())
+            print("=" * 60)
             error_msg = str(e).lower()
             if 'no such table' in error_msg or 'does not exist' in error_msg:
                 flash('Database not initialized. Please contact administrator.', 'error')
