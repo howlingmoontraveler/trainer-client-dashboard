@@ -80,7 +80,16 @@ def init_db():
         cursor = conn.cursor()
 
         # Execute statements individually
-        statements = [s.strip() for s in schema.split(';') if s.strip() and not s.strip().startswith('--')]
+        # Remove comment lines from each statement block, but keep the SQL
+        raw_statements = schema.split(';')
+        statements = []
+        for stmt in raw_statements:
+            # Remove comment lines but keep SQL
+            lines = [line for line in stmt.split('\n') if not line.strip().startswith('--')]
+            clean_stmt = '\n'.join(lines).strip()
+            if clean_stmt:
+                statements.append(clean_stmt)
+
         errors = []
         for i, stmt in enumerate(statements):
             try:
