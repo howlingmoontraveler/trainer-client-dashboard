@@ -914,6 +914,124 @@ def create_own_program():
     return render_template('create_own_program.html', exercises_library=exercises_library)
 
 
+@app.route('/client/exercises', methods=['GET'])
+@login_required
+def client_exercise_library():
+    """View exercise library (client version)"""
+    if session['role'] != 'client':
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = get_db()
+
+    # Get all exercises
+    exercises = db.execute('''
+        SELECT e.*, u.full_name as created_by_name
+        FROM exercise_library e
+        LEFT JOIN users u ON e.created_by = u.id
+        ORDER BY e.category, e.name
+    ''').fetchall()
+
+    # Get unique categories
+    categories = db.execute('''
+        SELECT DISTINCT category
+        FROM exercise_library
+        WHERE category IS NOT NULL
+        ORDER BY category
+    ''').fetchall()
+
+    db.close()
+
+    return render_template('client_exercise_library.html', exercises=exercises, categories=categories)
+
+
+@app.route('/client/exercises/add', methods=['GET', 'POST'])
+@login_required
+def client_add_exercise():
+    """Add custom exercise to library (client version)"""
+    if session['role'] != 'client':
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
+
+    if request.method == 'POST':
+        name = request.form['name']
+        category = request.form['category']
+        equipment = request.form.get('equipment', '')
+        description = request.form.get('description', '')
+        instructions = request.form.get('instructions', '')
+        demo_url = request.form.get('demo_url', '')
+        muscle_groups = request.form.get('muscle_groups', '')
+
+        db = get_db()
+
+        # Check if exercise name already exists
+        existing = db.execute('SELECT id FROM exercise_library WHERE name = ?', (name,)).fetchone()
+        if existing:
+            flash('An exercise with this name already exists.', 'error')
+            return render_template('client_add_exercise.html')
+
+        db.execute('''
+            INSERT INTO exercise_library
+            (name, category, equipment, description, instructions, demo_url, muscle_groups, is_custom, created_by)
+            VALUES (?, ?, ?, ?, ?, ?, ?, 1, ?)
+        ''', (name, category, equipment, description, instructions, demo_url, muscle_groups, session['user_id']))
+
+        db.commit()
+        db.close()
+
+        flash(f'Exercise "{name}" added successfully!', 'success')
+        return redirect(url_for('client_exercise_library'))
+
+    return render_template('client_add_exercise.html')
+
+
+@app.route('/client/exercises/<int:exercise_id>/edit', methods=['GET', 'POST'])
+@login_required
+def client_edit_exercise(exercise_id):
+    """Edit exercise in library (client version)"""
+    if session['role'] != 'client':
+        flash('Access denied.', 'error')
+        return redirect(url_for('dashboard'))
+
+    db = get_db()
+
+    exercise = db.execute('SELECT * FROM exercise_library WHERE id = ?', (exercise_id,)).fetchone()
+
+    if not exercise:
+        flash('Exercise not found.', 'error')
+        return redirect(url_for('client_exercise_library'))
+
+    # Only allow editing custom exercises created by this client
+    if not exercise['is_custom'] or exercise['created_by'] != session['user_id']:
+        flash('You can only edit exercises you created.', 'error')
+        return redirect(url_for('client_exercise_library'))
+
+    if request.method == 'POST':
+        name = request.form['name']
+        category = request.form['category']
+        equipment = request.form.get('equipment', '')
+        description = request.form.get('description', '')
+        instructions = request.form.get('instructions', '')
+        demo_url = request.form.get('demo_url', '')
+        muscle_groups = request.form.get('muscle_groups', '')
+
+        db.execute('''
+            UPDATE exercise_library
+            SET name = ?, category = ?, equipment = ?, description = ?,
+                instructions = ?, demo_url = ?, muscle_groups = ?
+            WHERE id = ?
+        ''', (name, category, equipment, description, instructions, demo_url, muscle_groups, exercise_id))
+
+        db.commit()
+        db.close()
+
+        flash(f'Exercise "{name}" updated successfully!', 'success')
+        return redirect(url_for('client_exercise_library'))
+
+    db.close()
+    return render_template('client_edit_exercise.html', exercise=exercise)
+
+
 @app.route('/trainer/client/<int:client_id>')
 @login_required
 @trainer_required

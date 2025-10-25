@@ -1,0 +1,95 @@
+{% extends "base.html" %}
+
+{% block title %}Edit Exercise{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Edit Exercise: {{ exercise.name }}</h1>
+
+    <form method="POST" action="{{ url_for('client_edit_exercise', exercise_id=exercise.id) }}">
+        <div class="form-row">
+            <div class="form-group">
+                <label for="name">Exercise Name *</label>
+                <input type="text" id="name" name="name" value="{{ exercise.name }}" required>
+            </div>
+
+            <div class="form-group">
+                <label for="category">Category *</label>
+                <select id="category" name="category" required>
+                    <option value="">Select Category</option>
+                    <option value="Legs" {% if exercise.category == 'Legs' %}selected{% endif %}>Legs</option>
+                    <option value="Back" {% if exercise.category == 'Back' %}selected{% endif %}>Back</option>
+                    <option value="Chest" {% if exercise.category == 'Chest' %}selected{% endif %}>Chest</option>
+                    <option value="Shoulders" {% if exercise.category == 'Shoulders' %}selected{% endif %}>Shoulders</option>
+                    <option value="Arms" {% if exercise.category == 'Arms' %}selected{% endif %}>Arms</option>
+                    <option value="Core" {% if exercise.category == 'Core' %}selected{% endif %}>Core</option>
+                    <option value="Cardio" {% if exercise.category == 'Cardio' %}selected{% endif %}>Cardio</option>
+                    <option value="Mobility" {% if exercise.category == 'Mobility' %}selected{% endif %}>Mobility</option>
+                    <option value="Functional" {% if exercise.category == 'Functional' %}selected{% endif %}>Functional</option>
+                    <option value="Custom" {% if exercise.category == 'Custom' %}selected{% endif %}>Custom</option>
+                </select>
+            </div>
+        </div>
+
+        <div class="form-row">
+            <div class="form-group">
+                <label for="equipment">Equipment</label>
+                <select id="equipment" name="equipment">
+                    <option value="">None</option>
+                    <option value="Barbell" {% if exercise.equipment == 'Barbell' %}selected{% endif %}>Barbell</option>
+                    <option value="Dumbbell" {% if exercise.equipment == 'Dumbbell' %}selected{% endif %}>Dumbbell</option>
+                    <option value="Kettlebell" {% if exercise.equipment == 'Kettlebell' %}selected{% endif %}>Kettlebell</option>
+                    <option value="Machine" {% if exercise.equipment == 'Machine' %}selected{% endif %}>Machine</option>
+                    <option value="Cable" {% if exercise.equipment == 'Cable' %}selected{% endif %}>Cable</option>
+                    <option value="Bodyweight" {% if exercise.equipment == 'Bodyweight' %}selected{% endif %}>Bodyweight</option>
+                    <option value="Bands" {% if exercise.equipment == 'Bands' %}selected{% endif %}>Bands</option>
+                    <option value="Plyometric" {% if exercise.equipment == 'Plyometric' %}selected{% endif %}>Plyometric</option>
+                    <option value="Sled" {% if exercise.equipment == 'Sled' %}selected{% endif %}>Sled</option>
+                    <option value="Landmine" {% if exercise.equipment == 'Landmine' %}selected{% endif %}>Landmine</option>
+                    <option value="Other" {% if exercise.equipment == 'Other' %}selected{% endif %}>Other</option>
+                </select>
+            </div>
+
+            <div class="form-group">
+                <label for="muscle_groups">Muscle Groups Targeted</label>
+                <input type="text" id="muscle_groups" name="muscle_groups" value="{{ exercise.muscle_groups or '' }}" placeholder="e.g., Quads, Glutes, Hamstrings">
+            </div>
+        </div>
+
+        <div class="form-group">
+            <label for="description">Short Description</label>
+            <textarea id="description" name="description" rows="2" placeholder="Brief description of the exercise">{{ exercise.description or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="instructions">Detailed Instructions</label>
+            <textarea id="instructions" name="instructions" rows="5" placeholder="Step-by-step instructions for performing the exercise">{{ exercise.instructions or '' }}</textarea>
+        </div>
+
+        <div class="form-group">
+            <label for="demo_url">Demo Video/Image URL</label>
+            <input type="url" id="demo_url" name="demo_url" value="{{ exercise.demo_url or '' }}" placeholder="https://youtube.com/...">
+            <small>Link to a YouTube video, image, or other demonstration</small>
+        </div>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('client_exercise_library') }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<style>
+.form-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+{% endblock %}

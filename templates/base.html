@@ -19,6 +19,8 @@
                 <a href="{{ url_for('dashboard') }}" class="nav-link">Dashboard</a>
                 {% if session.role == 'trainer' %}
                 <a href="{{ url_for('exercise_library') }}" class="nav-link">Exercise Library</a>
+                {% elif session.role == 'client' %}
+                <a href="{{ url_for('client_exercise_library') }}" class="nav-link">Exercise Library</a>
                 {% endif %}
                 <a href="https://betterforyall.com" class="nav-link" target="_blank">Back to Website</a>
                 <a href="{{ url_for('logout') }}" class="nav-link">Logout</a>
