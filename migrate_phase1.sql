@@ -17,5 +17,5 @@ ALTER TABLE exercises ADD COLUMN tempo TEXT;
 ALTER TABLE exercises ADD COLUMN rest_period TEXT;
 
 -- Add is_template flag to programs for cloning
-ALTER TABLE programs ADD COLUMN is_template BOOLEAN DEFAULT 0;
+ALTER TABLE programs ADD COLUMN is_template BOOLEAN DEFAULT FALSE;
 ALTER TABLE programs ADD COLUMN template_name TEXT;
