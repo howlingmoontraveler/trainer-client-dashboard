@@ -18,7 +18,7 @@
                 <div class="client-info">
                     <h3>{{ client.full_name }}</h3>
                     <p>{{ client.email }}</p>
-                    <p class="text-muted">Member since: {{ client.created_at[:10] }}</p>
+                    <p class="text-muted">Member since: {{ client.created_at|format_date }}</p>
                 </div>
                 <div class="client-actions">
                     <a href="{{ url_for('view_client', client_id=client.id) }}" class="btn btn-sm">View</a>

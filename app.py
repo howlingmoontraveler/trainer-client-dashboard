@@ -9,6 +9,17 @@ app = Flask(__name__)
 app.secret_key = os.urandom(24)
 app.config['DATABASE'] = 'trainer_dashboard.db'
 
+# Template filter for datetime formatting
+@app.template_filter('format_date')
+def format_date(value):
+    """Format datetime or string to YYYY-MM-DD"""
+    if value is None:
+        return ''
+    if isinstance(value, str):
+        return value[:10]
+    # It's a datetime object
+    return value.strftime('%Y-%m-%d')
+
 # Database helper functions
 class DatabaseWrapper:
     """Wrapper to make PostgreSQL and SQLite work the same way"""

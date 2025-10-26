@@ -18,7 +18,7 @@
                     <h3>{{ program.name }}</h3>
                     <p>{{ program.description }}</p>
                     <p class="text-muted">Created by: {{ program.trainer_name }}</p>
-                    <p class="text-muted">Date: {{ program.created_at[:10] }}</p>
+                    <p class="text-muted">Date: {{ program.created_at|format_date }}</p>
                 </div>
                 <div class="program-actions">
                     <a href="{{ url_for('view_program', program_id=program.id) }}" class="btn btn-primary">View Program</a>
