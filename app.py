@@ -11,24 +11,54 @@ app.config['DATABASE'] = 'trainer_dashboard.db'
 
 # Database helper functions
 def get_db():
-    db = sqlite3.connect(app.config['DATABASE'])
-    db.row_factory = sqlite3.Row
-    return db
+    """Get database connection - works with both SQLite (local) and PostgreSQL (Render)"""
+    db_url = os.environ.get('DATABASE_URL')
+
+    if db_url and 'postgres' in db_url:
+        # Production: Use PostgreSQL
+        import psycopg2
+        from psycopg2.extras import RealDictConnection
+
+        # Render uses postgres:// but psycopg2 needs postgresql://
+        if db_url.startswith('postgres://'):
+            db_url = db_url.replace('postgres://', 'postgresql://', 1)
+
+        conn = psycopg2.connect(db_url, connection_factory=RealDictConnection)
+        conn.autocommit = False
+        return conn
+    else:
+        # Local: Use SQLite
+        db = sqlite3.connect(app.config['DATABASE'])
+        db.row_factory = sqlite3.Row
+        return db
 
 def init_db():
     db = get_db()
+    cursor = db.cursor()
+
     with app.open_resource('schema.sql', mode='r') as f:
-        db.cursor().executescript(f.read())
+        schema_sql = f.read()
+
+    # For PostgreSQL, we need to execute line by line (no executescript)
+    if os.environ.get('DATABASE_URL') and 'postgres' in os.environ.get('DATABASE_URL'):
+        cursor.execute(schema_sql)
+    else:
+        # SQLite supports executescript
+        cursor.executescript(schema_sql)
+
     db.commit()
 
 def auto_populate_db():
     """Auto-populate database with exercises and templates if empty"""
     db = get_db()
     cursor = db.cursor()
+    is_postgres = os.environ.get('DATABASE_URL') and 'postgres' in os.environ.get('DATABASE_URL')
 
     try:
         # Check if exercises need to be populated
-        exercise_count = cursor.execute('SELECT COUNT(*) FROM exercise_library').fetchone()[0]
+        cursor.execute('SELECT COUNT(*) FROM exercise_library')
+        result = cursor.fetchone()
+        exercise_count = result['count'] if is_postgres else result[0]
 
         if exercise_count < 10:  # If less than 10 exercises, populate
             print(f"📊 Database has only {exercise_count} exercises. Auto-populating...")
@@ -37,7 +67,19 @@ def auto_populate_db():
             if os.path.exists('all_exercises.sql'):
                 print("   Loading exercises from all_exercises.sql...")
                 with open('all_exercises.sql', 'r') as f:
-                    cursor.executescript(f.read())
+                    sql_content = f.read()
+
+                if is_postgres:
+                    # Execute each INSERT separately for PostgreSQL
+                    for line in sql_content.strip().split('\n'):
+                        if line.strip() and line.startswith('INSERT'):
+                            try:
+                                cursor.execute(line)
+                            except:
+                                pass  # Skip duplicates
+                else:
+                    cursor.executescript(sql_content)
+
                 db.commit()
                 print("   ✅ Exercises loaded!")
 
@@ -45,21 +87,51 @@ def auto_populate_db():
             if os.path.exists('all_templates.sql') and os.path.exists('all_template_exercises.sql'):
                 print("   Loading templates...")
                 with open('all_templates.sql', 'r') as f:
-                    cursor.executescript(f.read())
+                    sql_content = f.read()
+
+                if is_postgres:
+                    for line in sql_content.strip().split('\n'):
+                        if line.strip() and line.startswith('INSERT'):
+                            try:
+                                cursor.execute(line)
+                            except:
+                                pass
+                else:
+                    cursor.executescript(sql_content)
+
                 with open('all_template_exercises.sql', 'r') as f:
-                    cursor.executescript(f.read())
+                    sql_content = f.read()
+
+                if is_postgres:
+                    for line in sql_content.strip().split('\n'):
+                        if line.strip() and line.startswith('INSERT'):
+                            try:
+                                cursor.execute(line)
+                            except:
+                                pass
+                else:
+                    cursor.executescript(sql_content)
+
                 db.commit()
                 print("   ✅ Templates loaded!")
 
             # Final count
-            final_count = cursor.execute('SELECT COUNT(*) FROM exercise_library').fetchone()[0]
-            template_count = cursor.execute('SELECT COUNT(*) FROM program_templates').fetchone()[0]
+            cursor.execute('SELECT COUNT(*) FROM exercise_library')
+            result = cursor.fetchone()
+            final_count = result['count'] if is_postgres else result[0]
+
+            cursor.execute('SELECT COUNT(*) FROM program_templates')
+            result = cursor.fetchone()
+            template_count = result['count'] if is_postgres else result[0]
+
             print(f"✅ Database populated: {final_count} exercises, {template_count} templates")
         else:
             print(f"✅ Database already populated ({exercise_count} exercises)")
 
     except Exception as e:
         print(f"⚠️  Auto-populate error: {e}")
+        import traceback
+        traceback.print_exc()
         db.rollback()
 
 # Authentication decorator
