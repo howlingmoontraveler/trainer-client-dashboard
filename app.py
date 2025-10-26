@@ -1023,8 +1023,26 @@ def get_trainer_clients():
     return jsonify([{'id': c['id'], 'name': c['full_name']} for c in clients])
 
 if __name__ == '__main__':
-    if not os.path.exists(app.config['DATABASE']):
-        init_db()
+    # Initialize database if needed
+    db_url = os.environ.get('DATABASE_URL')
+
+    if db_url and 'postgres' in db_url:
+        # PostgreSQL: Check if tables exist, initialize if not
+        try:
+            db = get_db()
+            cursor = db.cursor()
+            cursor.execute("SELECT COUNT(*) FROM users")
+            print("✅ Database tables already exist")
+        except:
+            print("📊 Initializing PostgreSQL database...")
+            init_db()
+            print("✅ Database initialized")
+    else:
+        # SQLite: Initialize if file doesn't exist
+        if not os.path.exists(app.config['DATABASE']):
+            print("📊 Initializing SQLite database...")
+            init_db()
+            print("✅ Database initialized")
 
     # Auto-populate database with exercises and templates if needed
     auto_populate_db()
