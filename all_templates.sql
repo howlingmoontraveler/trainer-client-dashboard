@@ -1,0 +1,10 @@
+INSERT INTO program_templates VALUES(3,1,'Complete Beginner - Bodyweight Basics','Perfect for absolute beginners. No equipment needed. 3 days per week full-body routine focusing on fundamental movement patterns.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(4,1,'Upper/Lower Split - Beginner','4-day split alternating upper and lower body. Great for building strength foundation with gym equipment.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(5,1,'Push/Pull/Legs Split','Classic 3-day or 6-day split. Push (chest/shoulders/triceps), Pull (back/biceps), Legs. Ideal for intermediate lifters.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(6,1,'Home Workout - No Equipment','Complete bodyweight program for home training. No equipment required. Build strength and endurance anywhere.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(7,1,'Strength Builder - Compound Focus','Heavy compound movements for maximum strength gains. 3-4 days per week. Intermediate to advanced.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(8,1,'Upper Body Hypertrophy','Muscle building program for upper body. Higher volume, moderate weight. Perfect for upper body development days.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(9,1,'Lower Body & Core Blast','Comprehensive leg and core workout. Build powerful legs and a stable core. 1-2x per week.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(10,1,'Athletic Performance','Develop power, speed, and functional strength. Plyometrics and compound movements. For active individuals.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(11,1,'Active Recovery & Mobility','Light movement, stretching, and mobility work. Perfect for rest days or recovery sessions.','2025-10-26 01:27:13');
+INSERT INTO program_templates VALUES(12,1,'Time-Efficient Full Body','Complete workout in 45 minutes. Compound movements only. Perfect for busy schedules. 3x per week.','2025-10-26 01:27:13');
