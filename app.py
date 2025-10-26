@@ -1022,8 +1022,9 @@ def get_trainer_clients():
 
     return jsonify([{'id': c['id'], 'name': c['full_name']} for c in clients])
 
-if __name__ == '__main__':
-    # Initialize database if needed
+# Initialize database on module load (works with both direct run and gunicorn)
+def initialize_database():
+    """Initialize database if needed - runs on module import"""
     db_url = os.environ.get('DATABASE_URL')
 
     if db_url and 'postgres' in db_url:
@@ -1033,8 +1034,8 @@ if __name__ == '__main__':
             cursor = db.cursor()
             cursor.execute("SELECT COUNT(*) FROM users")
             print("✅ Database tables already exist")
-        except:
-            print("📊 Initializing PostgreSQL database...")
+        except Exception as e:
+            print(f"📊 Initializing PostgreSQL database... (error: {e})")
             init_db()
             print("✅ Database initialized")
     else:
@@ -1047,6 +1048,10 @@ if __name__ == '__main__':
     # Auto-populate database with exercises and templates if needed
     auto_populate_db()
 
+# Run initialization when module is imported
+initialize_database()
+
+if __name__ == '__main__':
     # Get port from environment variable (for deployment) or default to 5000
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
