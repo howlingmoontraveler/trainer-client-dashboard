@@ -78,9 +78,43 @@ The code has been updated to support both:
 
 Requirements have been updated to include `psycopg2-binary==2.9.9` for PostgreSQL support.
 
+## Production Server Configuration
+
+⚠️ **IMPORTANT**: Flask's development server should NOT be used in production.
+
+### Set Start Command to Use Gunicorn
+
+1. Go to your web service on Render
+2. Click **"Settings"** in the left sidebar
+3. Scroll to **"Build & Deploy"** section
+4. Set **Start Command** to:
+   ```
+   gunicorn app:app
+   ```
+5. Click **"Save Changes"**
+
+This will use Gunicorn (a production WSGI server) instead of Flask's development server.
+
+**What this does:**
+- `gunicorn` - Production WSGI server (handles multiple requests efficiently)
+- `app:app` - Import the `app` object from `app.py`
+- Automatically uses the `PORT` environment variable set by Render
+- Handles multiple workers for better performance
+
+**Optional: Advanced Gunicorn Configuration**
+For better performance, you can use:
+```
+gunicorn app:app --workers 2 --threads 2 --timeout 120
+```
+
+- `--workers 2` - Run 2 worker processes (good for small apps on free tier)
+- `--threads 2` - 2 threads per worker
+- `--timeout 120` - 120 second timeout for long-running requests
+
 ## Need Help?
 
 If you encounter issues:
 1. Check Render logs: Dashboard → your service → "Logs" tab
 2. Verify DATABASE_URL is set correctly in Environment variables
 3. Make sure the PostgreSQL database is in "Available" status
+4. Verify Start Command is set to `gunicorn app:app`
