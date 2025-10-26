@@ -779,11 +779,11 @@ def program_templates():
 
     # Get all templates created by this trainer
     templates = db.execute('''
-        SELECT pt.*, COUNT(pte.id) as exercise_count
+        SELECT pt.id, pt.created_by, pt.name, pt.description, pt.created_at, COUNT(pte.id) as exercise_count
         FROM program_templates pt
         LEFT JOIN program_template_exercises pte ON pt.id = pte.template_id
         WHERE pt.created_by = ?
-        GROUP BY pt.id
+        GROUP BY pt.id, pt.created_by, pt.name, pt.description, pt.created_at
         ORDER BY pt.created_at DESC
     ''', (session['user_id'],)).fetchall()
 
