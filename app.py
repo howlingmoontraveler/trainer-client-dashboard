@@ -21,6 +21,47 @@ def init_db():
         db.cursor().executescript(f.read())
     db.commit()
 
+def auto_populate_db():
+    """Auto-populate database with exercises and templates if empty"""
+    db = get_db()
+    cursor = db.cursor()
+
+    try:
+        # Check if exercises need to be populated
+        exercise_count = cursor.execute('SELECT COUNT(*) FROM exercise_library').fetchone()[0]
+
+        if exercise_count < 10:  # If less than 10 exercises, populate
+            print(f"📊 Database has only {exercise_count} exercises. Auto-populating...")
+
+            # Check if SQL files exist
+            if os.path.exists('all_exercises.sql'):
+                print("   Loading exercises from all_exercises.sql...")
+                with open('all_exercises.sql', 'r') as f:
+                    cursor.executescript(f.read())
+                db.commit()
+                print("   ✅ Exercises loaded!")
+
+            # Load templates if file exists
+            if os.path.exists('all_templates.sql') and os.path.exists('all_template_exercises.sql'):
+                print("   Loading templates...")
+                with open('all_templates.sql', 'r') as f:
+                    cursor.executescript(f.read())
+                with open('all_template_exercises.sql', 'r') as f:
+                    cursor.executescript(f.read())
+                db.commit()
+                print("   ✅ Templates loaded!")
+
+            # Final count
+            final_count = cursor.execute('SELECT COUNT(*) FROM exercise_library').fetchone()[0]
+            template_count = cursor.execute('SELECT COUNT(*) FROM program_templates').fetchone()[0]
+            print(f"✅ Database populated: {final_count} exercises, {template_count} templates")
+        else:
+            print(f"✅ Database already populated ({exercise_count} exercises)")
+
+    except Exception as e:
+        print(f"⚠️  Auto-populate error: {e}")
+        db.rollback()
+
 # Authentication decorator
 def login_required(f):
     @wraps(f)
@@ -852,9 +893,12 @@ def get_trainer_clients():
 if __name__ == '__main__':
     if not os.path.exists(app.config['DATABASE']):
         init_db()
-    
+
+    # Auto-populate database with exercises and templates if needed
+    auto_populate_db()
+
     # Get port from environment variable (for deployment) or default to 5000
     port = int(os.environ.get('PORT', 5000))
     debug = os.environ.get('FLASK_ENV') == 'development'
-    
+
     app.run(debug=debug, host='0.0.0.0', port=port)
