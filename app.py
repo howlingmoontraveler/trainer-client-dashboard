@@ -10,6 +10,45 @@ app.secret_key = os.urandom(24)
 app.config['DATABASE'] = 'trainer_dashboard.db'
 
 # Database helper functions
+class DatabaseWrapper:
+    """Wrapper to make PostgreSQL and SQLite work the same way"""
+    def __init__(self, conn, is_postgres=False):
+        self.conn = conn
+        self.is_postgres = is_postgres
+        self._cursor = None
+
+    def execute(self, query, params=()):
+        """Execute a query with automatic parameter conversion"""
+        cursor = self.conn.cursor()
+
+        # Convert ? to %s for PostgreSQL
+        if self.is_postgres and '?' in query:
+            query = query.replace('?', '%s')
+
+        cursor.execute(query, params)
+        return cursor
+
+    def executescript(self, script):
+        """Execute a script (SQLite style)"""
+        cursor = self.conn.cursor()
+        if self.is_postgres:
+            cursor.execute(script)
+        else:
+            cursor.executescript(script)
+        return cursor
+
+    def commit(self):
+        self.conn.commit()
+
+    def rollback(self):
+        self.conn.rollback()
+
+    def close(self):
+        self.conn.close()
+
+    def cursor(self):
+        return self.conn.cursor()
+
 def get_db():
     """Get database connection - works with both SQLite (local) and PostgreSQL (Render)"""
     db_url = os.environ.get('DATABASE_URL')
@@ -25,12 +64,12 @@ def get_db():
 
         conn = psycopg2.connect(db_url, connection_factory=RealDictConnection)
         conn.autocommit = False
-        return conn
+        return DatabaseWrapper(conn, is_postgres=True)
     else:
         # Local: Use SQLite
         db = sqlite3.connect(app.config['DATABASE'])
         db.row_factory = sqlite3.Row
-        return db
+        return DatabaseWrapper(db, is_postgres=False)
 
 def init_db():
     db = get_db()
