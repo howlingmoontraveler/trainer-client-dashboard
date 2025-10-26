@@ -35,18 +35,28 @@ def get_db():
 def init_db():
     db = get_db()
     cursor = db.cursor()
+    is_postgres = os.environ.get('DATABASE_URL') and 'postgres' in os.environ.get('DATABASE_URL')
 
-    with app.open_resource('schema.sql', mode='r') as f:
-        schema_sql = f.read()
+    # Use different schema files for PostgreSQL vs SQLite
+    schema_file = 'schema_postgres.sql' if is_postgres else 'schema.sql'
 
-    # For PostgreSQL, we need to execute line by line (no executescript)
-    if os.environ.get('DATABASE_URL') and 'postgres' in os.environ.get('DATABASE_URL'):
+    try:
+        with app.open_resource(schema_file, mode='r') as f:
+            schema_sql = f.read()
+    except:
+        # Fallback to regular schema.sql if postgres version doesn't exist
+        with app.open_resource('schema.sql', mode='r') as f:
+            schema_sql = f.read()
+
+    # For PostgreSQL, execute as single statement
+    if is_postgres:
         cursor.execute(schema_sql)
     else:
         # SQLite supports executescript
         cursor.executescript(schema_sql)
 
     db.commit()
+    print(f"✅ Database initialized using {schema_file}")
 
 def auto_populate_db():
     """Auto-populate database with exercises and templates if empty"""
