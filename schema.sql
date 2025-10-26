@@ -94,6 +94,28 @@ CREATE TABLE IF NOT EXISTS exercise_library (
     FOREIGN KEY (created_by) REFERENCES users(id)
 );
 
+-- Program Templates table
+CREATE TABLE IF NOT EXISTS program_templates (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    created_by INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    description TEXT,
+    created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+    FOREIGN KEY (created_by) REFERENCES users(id)
+);
+
+-- Template exercises
+CREATE TABLE IF NOT EXISTS program_template_exercises (
+    id INTEGER PRIMARY KEY AUTOINCREMENT,
+    template_id INTEGER NOT NULL,
+    name TEXT NOT NULL,
+    sets TEXT,
+    reps TEXT,
+    notes TEXT,
+    exercise_order INTEGER,
+    FOREIGN KEY (template_id) REFERENCES program_templates(id) ON DELETE CASCADE
+);
+
 -- Link client to trainer
 INSERT INTO clients (trainer_id, client_id) VALUES (1, 2);
 

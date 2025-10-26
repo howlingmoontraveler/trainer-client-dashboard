@@ -7,6 +7,7 @@
     <h1>{{ client.full_name }}</h1>
     <div class="header-actions">
         <a href="{{ url_for('create_program', client_id=client.id) }}" class="btn btn-primary">Create Program</a>
+        <a href="{{ url_for('program_templates') }}" class="btn btn-success">Apply Template</a>
         <a href="{{ url_for('schedule_session', client_id=client.id) }}" class="btn btn-info">Schedule Session</a>
         <a href="{{ url_for('trainer_dashboard') }}" class="btn btn-secondary">Back</a>
     </div>

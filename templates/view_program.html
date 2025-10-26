@@ -9,7 +9,12 @@
         <p class="program-description">{{ program.description }}</p>
         <p class="text-muted">Created: {{ program.created_at[:10] }}</p>
     </div>
-    <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    <div>
+        {% if session.role == 'trainer' %}
+        <a href="{{ url_for('bulk_edit_program', program_id=program.id) }}" class="btn btn-warning">Bulk Edit</a>
+        {% endif %}
+        <a href="{{ url_for('dashboard') }}" class="btn btn-secondary">Back to Dashboard</a>
+    </div>
 </div>
 
 <div class="card">

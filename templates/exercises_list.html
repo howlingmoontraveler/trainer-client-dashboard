@@ -15,6 +15,10 @@
             <div class="card mb-4">
                 <div class="card-body">
                     <form method="GET" class="row g-3">
+                        <div class="col-md-6">
+                            <label for="search" class="form-label">Search</label>
+                            <input type="text" name="search" id="search" class="form-control" placeholder="Search by name, description, or muscle groups..." value="{{ current_search }}">
+                        </div>
                         <div class="col-md-3">
                             <label for="category" class="form-label">Category</label>
                             <select name="category" id="category" class="form-select">
@@ -34,13 +38,28 @@
                             </select>
                         </div>
                         <div class="col-md-4">
-                            <label for="search" class="form-label">Search</label>
-                            <input type="text" name="search" id="search" class="form-control" placeholder="Search exercises..." value="{{ current_search }}">
+                            <label for="muscle_group" class="form-label">Muscle Group</label>
+                            <select name="muscle_group" id="muscle_group" class="form-select">
+                                <option value="">All Muscle Groups</option>
+                                {% for mg in muscle_groups %}
+                                <option value="{{ mg }}" {% if mg == current_muscle_group %}selected{% endif %}>{{ mg }}</option>
+                                {% endfor %}
+                            </select>
                         </div>
-                        <div class="col-md-2">
+                        <div class="col-md-4">
+                            <label for="equipment" class="form-label">Equipment</label>
+                            <select name="equipment" id="equipment" class="form-select">
+                                <option value="">All Equipment</option>
+                                {% for eq in equipment_list %}
+                                <option value="{{ eq.equipment }}" {% if eq.equipment == current_equipment %}selected{% endif %}>{{ eq.equipment }}</option>
+                                {% endfor %}
+                            </select>
+                        </div>
+                        <div class="col-md-4">
                             <label class="form-label">&nbsp;</label>
-                            <div class="d-grid">
-                                <button type="submit" class="btn btn-outline-primary">Filter</button>
+                            <div class="d-flex gap-2">
+                                <button type="submit" class="btn btn-primary flex-grow-1">Apply Filters</button>
+                                <a href="{{ url_for('exercises_list') }}" class="btn btn-outline-secondary">Clear</a>
                             </div>
                         </div>
                     </form>

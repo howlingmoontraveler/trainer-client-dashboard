@@ -1,0 +1,100 @@
+{% extends "base.html" %}
+
+{% block title %}{{ template.name }}{% endblock %}
+
+{% block content %}
+<div class="container mt-4">
+    <div class="row">
+        <div class="col-12">
+            <div class="d-flex justify-content-between align-items-center mb-4">
+                <h2>{{ template.name }}</h2>
+                <a href="{{ url_for('program_templates') }}" class="btn btn-secondary">Back to Templates</a>
+            </div>
+
+            <div class="card mb-4">
+                <div class="card-body">
+                    <h5 class="card-title">Description</h5>
+                    <p class="card-text">{{ template.description or 'No description provided' }}</p>
+                    <p class="text-muted"><small>Created: {{ template.created_at }}</small></p>
+                </div>
+            </div>
+
+            <h3 class="mb-3">Exercises</h3>
+            {% if exercises %}
+            <div class="table-responsive">
+                <table class="table table-striped">
+                    <thead>
+                        <tr>
+                            <th>#</th>
+                            <th>Exercise</th>
+                            <th>Sets</th>
+                            <th>Reps</th>
+                            <th>Notes</th>
+                        </tr>
+                    </thead>
+                    <tbody>
+                        {% for exercise in exercises %}
+                        <tr>
+                            <td>{{ exercise.exercise_order }}</td>
+                            <td><strong>{{ exercise.name }}</strong></td>
+                            <td>{{ exercise.sets or '-' }}</td>
+                            <td>{{ exercise.reps or '-' }}</td>
+                            <td>{{ exercise.notes or '-' }}</td>
+                        </tr>
+                        {% endfor %}
+                    </tbody>
+                </table>
+            </div>
+            {% else %}
+            <p class="text-muted">No exercises in this template.</p>
+            {% endif %}
+
+            <div class="mt-4">
+                <h4>Apply to Client</h4>
+                <form method="POST" class="d-inline">
+                    <div class="input-group" style="max-width: 400px;">
+                        <select name="client_id" class="form-select" required id="clientSelect">
+                            <option value="">Select a client...</option>
+                        </select>
+                        <button type="button" class="btn btn-primary" onclick="applyTemplate()">Apply Template</button>
+                    </div>
+                </form>
+            </div>
+        </div>
+    </div>
+</div>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // Load clients for the dropdown
+    fetch('/api/trainer/clients')
+        .then(response => response.json())
+        .then(clients => {
+            const select = document.getElementById('clientSelect');
+            clients.forEach(client => {
+                const option = document.createElement('option');
+                option.value = client.id;
+                option.textContent = client.name;
+                select.appendChild(option);
+            });
+        })
+        .catch(error => {
+            console.error('Error loading clients:', error);
+        });
+});
+
+function applyTemplate() {
+    const clientId = document.getElementById('clientSelect').value;
+    if (!clientId) {
+        alert('Please select a client');
+        return;
+    }
+    const templateId = {{ template.id }};
+    const form = document.createElement('form');
+    form.method = 'POST';
+    form.action = `/trainer/program-templates/${templateId}/apply/${clientId}`;
+    document.body.appendChild(form);
+    form.submit();
+}
+</script>
+{% endblock %}

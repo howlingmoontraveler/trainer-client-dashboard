@@ -1,0 +1,284 @@
+{% extends "base.html" %}
+
+{% block title %}Analytics Dashboard{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="row">
+        <div class="col-12">
+            <h2 class="mb-4">Analytics Dashboard</h2>
+
+            <!-- Summary Cards -->
+            <div class="row mb-4">
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted">Total Clients</h5>
+                            <h2 class="display-4">{{ total_clients }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted">Active Clients (30d)</h5>
+                            <h2 class="display-4">{{ active_clients }}</h2>
+                            {% if total_clients > 0 %}
+                            <small class="text-muted">{{ "%.0f"|format((active_clients / total_clients) * 100) }}% engagement</small>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted">Total Programs</h5>
+                            <h2 class="display-4">{{ total_programs }}</h2>
+                        </div>
+                    </div>
+                </div>
+                <div class="col-md-3">
+                    <div class="card text-center">
+                        <div class="card-body">
+                            <h5 class="card-title text-muted">Workouts Logged</h5>
+                            <h2 class="display-4">{{ total_workouts_logged }}</h2>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Charts Row -->
+            <div class="row mb-4">
+                <!-- Workout Trend Chart -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Workout Activity (Last 30 Days)</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if workout_trend %}
+                            <canvas id="workoutTrendChart" height="200"></canvas>
+                            {% else %}
+                            <p class="text-muted text-center py-5">No workout data available</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Category Distribution Chart -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Exercise Categories</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if category_distribution %}
+                            <canvas id="categoryChart" height="200"></canvas>
+                            {% else %}
+                            <p class="text-muted text-center py-5">No exercise data available</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Tables Row -->
+            <div class="row mb-4">
+                <!-- Most Active Clients -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Most Active Clients</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if most_active_clients %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Client</th>
+                                            <th>Workouts</th>
+                                            <th>Last Activity</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for client in most_active_clients %}
+                                        <tr>
+                                            <td>{{ client.full_name }}</td>
+                                            <td><span class="badge bg-primary">{{ client.workout_count }}</span></td>
+                                            <td>
+                                                {% if client.last_workout %}
+                                                <small>{{ client.last_workout }}</small>
+                                                {% else %}
+                                                <small class="text-muted">Never</small>
+                                                {% endif %}
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-muted text-center py-3">No client activity yet</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Most Popular Exercises -->
+                <div class="col-md-6">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Most Popular Exercises</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if popular_exercises %}
+                            <div class="table-responsive">
+                                <table class="table table-sm">
+                                    <thead>
+                                        <tr>
+                                            <th>Exercise</th>
+                                            <th>Times Logged</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for exercise in popular_exercises %}
+                                        <tr>
+                                            <td>{{ exercise.name }}</td>
+                                            <td><span class="badge bg-success">{{ exercise.log_count }}</span></td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-muted text-center py-3">No exercise data yet</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Program Engagement -->
+            <div class="row mb-4">
+                <div class="col-12">
+                    <div class="card">
+                        <div class="card-header">
+                            <h5>Program Engagement Rates</h5>
+                        </div>
+                        <div class="card-body">
+                            {% if program_engagement %}
+                            <div class="table-responsive">
+                                <table class="table">
+                                    <thead>
+                                        <tr>
+                                            <th>Program</th>
+                                            <th>Client</th>
+                                            <th>Total Exercises</th>
+                                            <th>Logged Exercises</th>
+                                            <th>Completion Rate</th>
+                                        </tr>
+                                    </thead>
+                                    <tbody>
+                                        {% for program in program_engagement %}
+                                        <tr>
+                                            <td>{{ program.name }}</td>
+                                            <td>{{ program.client_name }}</td>
+                                            <td>{{ program.total_exercises }}</td>
+                                            <td>{{ program.logged_exercises }}</td>
+                                            <td>
+                                                <div class="progress" style="height: 25px;">
+                                                    <div class="progress-bar {% if program.completion_rate >= 75 %}bg-success{% elif program.completion_rate >= 50 %}bg-warning{% else %}bg-danger{% endif %}"
+                                                         role="progressbar"
+                                                         style="width: {{ program.completion_rate }}%"
+                                                         aria-valuenow="{{ program.completion_rate }}"
+                                                         aria-valuemin="0"
+                                                         aria-valuemax="100">
+                                                        {{ "%.0f"|format(program.completion_rate) }}%
+                                                    </div>
+                                                </div>
+                                            </td>
+                                        </tr>
+                                        {% endfor %}
+                                    </tbody>
+                                </table>
+                            </div>
+                            {% else %}
+                            <p class="text-muted text-center py-3">No program engagement data yet</p>
+                            {% endif %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Chart.js -->
+<script src="https://cdn.jsdelivr.net/npm/chart.js@3.9.1/dist/chart.min.js"></script>
+<script>
+    // Workout Trend Chart
+    {% if workout_trend %}
+    const workoutTrendData = {
+        labels: [{% for item in workout_trend %}'{{ item.log_date }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Workouts Logged',
+            data: [{% for item in workout_trend %}{{ item.count }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            borderColor: 'rgb(75, 192, 192)',
+            backgroundColor: 'rgba(75, 192, 192, 0.2)',
+            tension: 0.1
+        }]
+    };
+
+    const workoutTrendConfig = {
+        type: 'line',
+        data: workoutTrendData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false,
+            scales: {
+                y: {
+                    beginAtZero: true,
+                    ticks: {
+                        stepSize: 1
+                    }
+                }
+            }
+        }
+    };
+
+    new Chart(document.getElementById('workoutTrendChart'), workoutTrendConfig);
+    {% endif %}
+
+    // Category Distribution Chart
+    {% if category_distribution %}
+    const categoryData = {
+        labels: [{% for cat in category_distribution %}'{{ cat.category }}'{% if not loop.last %}, {% endif %}{% endfor %}],
+        datasets: [{
+            label: 'Exercise Count',
+            data: [{% for cat in category_distribution %}{{ cat.count }}{% if not loop.last %}, {% endif %}{% endfor %}],
+            backgroundColor: [
+                'rgba(255, 99, 132, 0.6)',
+                'rgba(54, 162, 235, 0.6)',
+                'rgba(255, 206, 86, 0.6)',
+                'rgba(75, 192, 192, 0.6)',
+                'rgba(153, 102, 255, 0.6)',
+                'rgba(255, 159, 64, 0.6)'
+            ],
+            borderWidth: 1
+        }]
+    };
+
+    const categoryConfig = {
+        type: 'doughnut',
+        data: categoryData,
+        options: {
+            responsive: true,
+            maintainAspectRatio: false
+        }
+    };
+
+    new Chart(document.getElementById('categoryChart'), categoryConfig);
+    {% endif %}
+</script>
+{% endblock %}

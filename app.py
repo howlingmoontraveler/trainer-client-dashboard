@@ -338,38 +338,61 @@ def log_workout():
 @trainer_required
 def exercises_list():
     db = get_db()
-    
+
     # Get filter parameters
     category = request.args.get('category', '')
     difficulty = request.args.get('difficulty', '')
+    equipment = request.args.get('equipment', '')
+    muscle_group = request.args.get('muscle_group', '')
     search = request.args.get('search', '')
-    
+
     # Build query
     query = 'SELECT * FROM exercise_library WHERE 1=1'
     params = []
-    
+
     if category:
         query += ' AND category = ?'
         params.append(category)
-    
+
     if difficulty:
         query += ' AND difficulty_level = ?'
         params.append(difficulty)
-    
+
+    if equipment:
+        query += ' AND equipment LIKE ?'
+        params.append(f'%{equipment}%')
+
+    if muscle_group:
+        query += ' AND muscle_groups LIKE ?'
+        params.append(f'%{muscle_group}%')
+
     if search:
         query += ' AND (name LIKE ? OR description LIKE ? OR muscle_groups LIKE ?)'
         search_term = f'%{search}%'
         params.extend([search_term, search_term, search_term])
-    
+
     query += ' ORDER BY name'
-    
+
     exercises = db.execute(query, params).fetchall()
-    
-    # Get unique categories for filter
+
+    # Get unique values for filters
     categories = db.execute('SELECT DISTINCT category FROM exercise_library WHERE category IS NOT NULL ORDER BY category').fetchall()
-    
-    return render_template('exercises_list.html', exercises=exercises, categories=categories, 
-                         current_category=category, current_difficulty=difficulty, current_search=search)
+    equipment_list = db.execute('SELECT DISTINCT equipment FROM exercise_library WHERE equipment IS NOT NULL ORDER BY equipment').fetchall()
+
+    # Extract unique muscle groups (they're stored as comma-separated strings)
+    muscle_groups_raw = db.execute('SELECT DISTINCT muscle_groups FROM exercise_library WHERE muscle_groups IS NOT NULL').fetchall()
+    muscle_groups_set = set()
+    for row in muscle_groups_raw:
+        if row['muscle_groups']:
+            for mg in row['muscle_groups'].split(','):
+                muscle_groups_set.add(mg.strip())
+    muscle_groups = sorted(list(muscle_groups_set))
+
+    return render_template('exercises_list.html', exercises=exercises, categories=categories,
+                         equipment_list=equipment_list, muscle_groups=muscle_groups,
+                         current_category=category, current_difficulty=difficulty,
+                         current_equipment=equipment, current_muscle_group=muscle_group,
+                         current_search=search)
 
 @app.route('/trainer/exercises/create', methods=['GET', 'POST'])
 @login_required
@@ -446,29 +469,385 @@ def edit_exercise(exercise_id):
 @trainer_required
 def delete_exercise(exercise_id):
     db = get_db()
-    
+
     # Check if exercise exists
     exercise = db.execute('SELECT * FROM exercise_library WHERE id = ?', (exercise_id,)).fetchone()
     if not exercise:
         flash('Exercise not found.', 'error')
         return redirect(url_for('exercises_list'))
-    
+
     # Check if exercise is used in any programs
     programs_using = db.execute('''
-        SELECT COUNT(*) as count FROM exercises e 
-        JOIN programs p ON e.program_id = p.id 
+        SELECT COUNT(*) as count FROM exercises e
+        JOIN programs p ON e.program_id = p.id
         WHERE e.name = ?
     ''', (exercise['name'],)).fetchone()
-    
+
     if programs_using['count'] > 0:
         flash('Cannot delete exercise - it is being used in existing programs.', 'error')
         return redirect(url_for('view_exercise', exercise_id=exercise_id))
-    
+
     db.execute('DELETE FROM exercise_library WHERE id = ?', (exercise_id,))
     db.commit()
-    
+
     flash('Exercise deleted successfully!', 'success')
     return redirect(url_for('exercises_list'))
+
+# Analytics Routes
+@app.route('/trainer/analytics')
+@login_required
+@trainer_required
+def analytics_dashboard():
+    db = get_db()
+    trainer_id = session['user_id']
+
+    # Total clients
+    total_clients = db.execute('''
+        SELECT COUNT(*) as count FROM clients WHERE trainer_id = ?
+    ''', (trainer_id,)).fetchone()['count']
+
+    # Total programs created
+    total_programs = db.execute('''
+        SELECT COUNT(*) as count FROM programs WHERE created_by = ?
+    ''', (trainer_id,)).fetchone()['count']
+
+    # Total workout logs across all clients
+    total_workouts_logged = db.execute('''
+        SELECT COUNT(*) as count FROM workout_logs wl
+        JOIN clients c ON wl.client_id = c.client_id
+        WHERE c.trainer_id = ?
+    ''', (trainer_id,)).fetchone()['count']
+
+    # Client engagement - clients with at least one workout log in last 30 days
+    active_clients = db.execute('''
+        SELECT COUNT(DISTINCT wl.client_id) as count
+        FROM workout_logs wl
+        JOIN clients c ON wl.client_id = c.client_id
+        WHERE c.trainer_id = ? AND wl.log_date >= date('now', '-30 days')
+    ''', (trainer_id,)).fetchone()['count']
+
+    # Most active clients (top 10 by workout logs)
+    most_active_clients = db.execute('''
+        SELECT u.full_name, u.email, COUNT(wl.id) as workout_count,
+               MAX(wl.log_date) as last_workout
+        FROM users u
+        JOIN clients c ON u.id = c.client_id
+        LEFT JOIN workout_logs wl ON u.id = wl.client_id
+        WHERE c.trainer_id = ?
+        GROUP BY u.id, u.full_name, u.email
+        ORDER BY workout_count DESC
+        LIMIT 10
+    ''', (trainer_id,)).fetchall()
+
+    # Most popular exercises (top 10 by usage in workout logs)
+    popular_exercises = db.execute('''
+        SELECT e.name, COUNT(wl.id) as log_count
+        FROM exercises e
+        JOIN workout_logs wl ON e.id = wl.exercise_id
+        JOIN programs p ON e.program_id = p.id
+        WHERE p.created_by = ?
+        GROUP BY e.name
+        ORDER BY log_count DESC
+        LIMIT 10
+    ''', (trainer_id,)).fetchall()
+
+    # Program completion rates (programs with at least one logged workout)
+    program_engagement = db.execute('''
+        SELECT p.name, p.client_id, u.full_name as client_name,
+               COUNT(DISTINCT e.id) as total_exercises,
+               COUNT(DISTINCT wl.exercise_id) as logged_exercises,
+               CAST(COUNT(DISTINCT wl.exercise_id) AS FLOAT) / COUNT(DISTINCT e.id) * 100 as completion_rate
+        FROM programs p
+        JOIN users u ON p.client_id = u.id
+        LEFT JOIN exercises e ON p.id = e.program_id
+        LEFT JOIN workout_logs wl ON e.id = wl.exercise_id
+        WHERE p.created_by = ? AND e.id IS NOT NULL
+        GROUP BY p.id, p.name, p.client_id, u.full_name
+        ORDER BY completion_rate DESC
+        LIMIT 15
+    ''', (trainer_id,)).fetchall()
+
+    # Workout logs over time (last 30 days)
+    workout_trend = db.execute('''
+        SELECT DATE(wl.log_date) as log_date, COUNT(*) as count
+        FROM workout_logs wl
+        JOIN clients c ON wl.client_id = c.client_id
+        WHERE c.trainer_id = ? AND wl.log_date >= date('now', '-30 days')
+        GROUP BY DATE(wl.log_date)
+        ORDER BY log_date
+    ''', (trainer_id,)).fetchall()
+
+    # Exercise category distribution in library
+    category_distribution = db.execute('''
+        SELECT category, COUNT(*) as count
+        FROM exercise_library
+        WHERE category IS NOT NULL
+        GROUP BY category
+        ORDER BY count DESC
+    ''').fetchall()
+
+    return render_template('analytics_dashboard.html',
+                         total_clients=total_clients,
+                         total_programs=total_programs,
+                         total_workouts_logged=total_workouts_logged,
+                         active_clients=active_clients,
+                         most_active_clients=most_active_clients,
+                         popular_exercises=popular_exercises,
+                         program_engagement=program_engagement,
+                         workout_trend=workout_trend,
+                         category_distribution=category_distribution)
+
+# Program Templates Routes
+@app.route('/trainer/program-templates')
+@login_required
+@trainer_required
+def program_templates():
+    db = get_db()
+
+    # Get all templates created by this trainer
+    templates = db.execute('''
+        SELECT pt.*, COUNT(pte.id) as exercise_count
+        FROM program_templates pt
+        LEFT JOIN program_template_exercises pte ON pt.id = pte.template_id
+        WHERE pt.created_by = ?
+        GROUP BY pt.id
+        ORDER BY pt.created_at DESC
+    ''', (session['user_id'],)).fetchall()
+
+    return render_template('program_templates.html', templates=templates)
+
+@app.route('/trainer/program-templates/create', methods=['GET', 'POST'])
+@login_required
+@trainer_required
+def create_program_template():
+    if request.method == 'POST':
+        name = request.form['name']
+        description = request.form['description']
+
+        db = get_db()
+        cursor = db.execute('''
+            INSERT INTO program_templates (created_by, name, description)
+            VALUES (?, ?, ?)
+        ''', (session['user_id'], name, description))
+        template_id = cursor.lastrowid
+
+        # Add exercises to template
+        exercise_names = request.form.getlist('exercise_name[]')
+        exercise_sets = request.form.getlist('exercise_sets[]')
+        exercise_reps = request.form.getlist('exercise_reps[]')
+        exercise_notes = request.form.getlist('exercise_notes[]')
+
+        for i, name in enumerate(exercise_names):
+            if name.strip():
+                db.execute('''
+                    INSERT INTO program_template_exercises (template_id, name, sets, reps, notes, exercise_order)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (template_id, name, exercise_sets[i], exercise_reps[i], exercise_notes[i], i + 1))
+
+        db.commit()
+        flash('Program template created successfully!', 'success')
+        return redirect(url_for('program_templates'))
+
+    return render_template('create_program_template.html')
+
+@app.route('/trainer/program-templates/<int:template_id>')
+@login_required
+@trainer_required
+def view_program_template(template_id):
+    db = get_db()
+
+    template = db.execute('''
+        SELECT * FROM program_templates WHERE id = ? AND created_by = ?
+    ''', (template_id, session['user_id'])).fetchone()
+
+    if not template:
+        flash('Template not found.', 'error')
+        return redirect(url_for('program_templates'))
+
+    exercises = db.execute('''
+        SELECT * FROM program_template_exercises
+        WHERE template_id = ?
+        ORDER BY exercise_order
+    ''', (template_id,)).fetchall()
+
+    return render_template('view_program_template.html', template=template, exercises=exercises)
+
+@app.route('/trainer/program-templates/<int:template_id>/apply/<int:client_id>', methods=['POST'])
+@login_required
+@trainer_required
+def apply_template_to_client(template_id, client_id):
+    db = get_db()
+
+    # Verify template belongs to trainer
+    template = db.execute('''
+        SELECT * FROM program_templates WHERE id = ? AND created_by = ?
+    ''', (template_id, session['user_id'])).fetchone()
+
+    if not template:
+        flash('Template not found.', 'error')
+        return redirect(url_for('program_templates'))
+
+    # Verify client belongs to trainer
+    client = db.execute('''
+        SELECT u.id, u.full_name
+        FROM users u
+        JOIN clients c ON u.id = c.client_id
+        WHERE c.trainer_id = ? AND u.id = ?
+    ''', (session['user_id'], client_id)).fetchone()
+
+    if not client:
+        flash('Client not found.', 'error')
+        return redirect(url_for('program_templates'))
+
+    # Create program from template
+    cursor = db.execute('''
+        INSERT INTO programs (client_id, created_by, name, description)
+        VALUES (?, ?, ?, ?)
+    ''', (client_id, session['user_id'], template['name'], template['description']))
+    program_id = cursor.lastrowid
+
+    # Copy exercises from template
+    template_exercises = db.execute('''
+        SELECT * FROM program_template_exercises
+        WHERE template_id = ?
+        ORDER BY exercise_order
+    ''', (template_id,)).fetchall()
+
+    for ex in template_exercises:
+        db.execute('''
+            INSERT INTO exercises (program_id, name, sets, reps, notes, exercise_order)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (program_id, ex['name'], ex['sets'], ex['reps'], ex['notes'], ex['exercise_order']))
+
+    db.commit()
+    flash(f'Template "{template["name"]}" applied to {client["full_name"]}!', 'success')
+    return redirect(url_for('view_client', client_id=client_id))
+
+@app.route('/trainer/programs/<int:program_id>/copy/<int:target_client_id>', methods=['POST'])
+@login_required
+@trainer_required
+def copy_program(program_id, target_client_id):
+    db = get_db()
+
+    # Get original program
+    program = db.execute('''
+        SELECT p.* FROM programs p
+        JOIN clients c ON p.client_id = c.client_id
+        WHERE p.id = ? AND c.trainer_id = ?
+    ''', (program_id, session['user_id'])).fetchone()
+
+    if not program:
+        flash('Program not found.', 'error')
+        return redirect(url_for('trainer_dashboard'))
+
+    # Verify target client belongs to trainer
+    target_client = db.execute('''
+        SELECT u.id, u.full_name
+        FROM users u
+        JOIN clients c ON u.id = c.client_id
+        WHERE c.trainer_id = ? AND u.id = ?
+    ''', (session['user_id'], target_client_id)).fetchone()
+
+    if not target_client:
+        flash('Target client not found.', 'error')
+        return redirect(url_for('trainer_dashboard'))
+
+    # Create copy of program
+    cursor = db.execute('''
+        INSERT INTO programs (client_id, created_by, name, description)
+        VALUES (?, ?, ?, ?)
+    ''', (target_client_id, session['user_id'],
+          f"{program['name']} (Copy)", program['description']))
+    new_program_id = cursor.lastrowid
+
+    # Copy exercises
+    exercises = db.execute('''
+        SELECT * FROM exercises
+        WHERE program_id = ?
+        ORDER BY exercise_order
+    ''', (program_id,)).fetchall()
+
+    for ex in exercises:
+        db.execute('''
+            INSERT INTO exercises (program_id, name, sets, reps, notes, exercise_order)
+            VALUES (?, ?, ?, ?, ?, ?)
+        ''', (new_program_id, ex['name'], ex['sets'], ex['reps'], ex['notes'], ex['exercise_order']))
+
+    db.commit()
+    flash(f'Program copied to {target_client["full_name"]}!', 'success')
+    return redirect(url_for('view_client', client_id=target_client_id))
+
+@app.route('/trainer/programs/<int:program_id>/bulk-edit', methods=['GET', 'POST'])
+@login_required
+@trainer_required
+def bulk_edit_program(program_id):
+    db = get_db()
+
+    # Verify program belongs to trainer's client
+    program = db.execute('''
+        SELECT p.* FROM programs p
+        JOIN clients c ON p.client_id = c.client_id
+        WHERE p.id = ? AND c.trainer_id = ?
+    ''', (program_id, session['user_id'])).fetchone()
+
+    if not program:
+        flash('Program not found.', 'error')
+        return redirect(url_for('trainer_dashboard'))
+
+    if request.method == 'POST':
+        # Update program details
+        program_name = request.form['name']
+        program_description = request.form['description']
+
+        db.execute('''
+            UPDATE programs SET name = ?, description = ?
+            WHERE id = ?
+        ''', (program_name, program_description, program_id))
+
+        # Delete all existing exercises
+        db.execute('DELETE FROM exercises WHERE program_id = ?', (program_id,))
+
+        # Add new exercises
+        exercise_names = request.form.getlist('exercise_name[]')
+        exercise_sets = request.form.getlist('exercise_sets[]')
+        exercise_reps = request.form.getlist('exercise_reps[]')
+        exercise_notes = request.form.getlist('exercise_notes[]')
+
+        for i, name in enumerate(exercise_names):
+            if name.strip():
+                db.execute('''
+                    INSERT INTO exercises (program_id, name, sets, reps, notes, exercise_order)
+                    VALUES (?, ?, ?, ?, ?, ?)
+                ''', (program_id, name, exercise_sets[i], exercise_reps[i], exercise_notes[i], i + 1))
+
+        db.commit()
+        flash('Program updated successfully!', 'success')
+        return redirect(url_for('view_program', program_id=program_id))
+
+    # Get current exercises
+    exercises = db.execute('''
+        SELECT * FROM exercises
+        WHERE program_id = ?
+        ORDER BY exercise_order
+    ''', (program_id,)).fetchall()
+
+    return render_template('bulk_edit_program.html', program=program, exercises=exercises)
+
+# API endpoint for getting clients
+@app.route('/api/trainer/clients')
+@login_required
+@trainer_required
+def get_trainer_clients():
+    db = get_db()
+    clients = db.execute('''
+        SELECT u.id, u.full_name
+        FROM users u
+        JOIN clients c ON u.id = c.client_id
+        WHERE c.trainer_id = ?
+        ORDER BY u.full_name
+    ''', (session['user_id'],)).fetchall()
+
+    return jsonify([{'id': c['id'], 'name': c['full_name']} for c in clients])
 
 if __name__ == '__main__':
     if not os.path.exists(app.config['DATABASE']):

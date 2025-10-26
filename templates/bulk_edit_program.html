@@ -1,0 +1,110 @@
+{% extends "base.html" %}
+
+{% block title %}Bulk Edit Program{% endblock %}
+
+{% block content %}
+<div class="form-container">
+    <h1>Bulk Edit Program</h1>
+    <p class="text-muted">Edit all exercises in this program at once</p>
+
+    <form method="POST" action="{{ url_for('bulk_edit_program', program_id=program.id) }}" id="bulkEditForm">
+        <div class="form-group">
+            <label for="name">Program Name *</label>
+            <input type="text" id="name" name="name" required value="{{ program.name }}">
+        </div>
+
+        <div class="form-group">
+            <label for="description">Description</label>
+            <textarea id="description" name="description" rows="3">{{ program.description or '' }}</textarea>
+        </div>
+
+        <h2>Exercises</h2>
+        <p class="text-muted">All existing exercises will be replaced with these new ones</p>
+        <div id="exercises">
+            {% if exercises %}
+            {% for exercise in exercises %}
+            <div class="exercise-item">
+                <div class="exercise-fields">
+                    <div class="form-group">
+                        <label>Exercise Name *</label>
+                        <input type="text" name="exercise_name[]" required value="{{ exercise.name }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Sets</label>
+                        <input type="text" name="exercise_sets[]" value="{{ exercise.sets or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Reps</label>
+                        <input type="text" name="exercise_reps[]" value="{{ exercise.reps or '' }}">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <input type="text" name="exercise_notes[]" value="{{ exercise.notes or '' }}">
+                    </div>
+                </div>
+                <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">Remove</button>
+            </div>
+            {% endfor %}
+            {% else %}
+            <div class="exercise-item">
+                <div class="exercise-fields">
+                    <div class="form-group">
+                        <label>Exercise Name *</label>
+                        <input type="text" name="exercise_name[]" required placeholder="e.g., Bench Press">
+                    </div>
+                    <div class="form-group">
+                        <label>Sets</label>
+                        <input type="text" name="exercise_sets[]" placeholder="e.g., 3">
+                    </div>
+                    <div class="form-group">
+                        <label>Reps</label>
+                        <input type="text" name="exercise_reps[]" placeholder="e.g., 10-12">
+                    </div>
+                    <div class="form-group">
+                        <label>Notes</label>
+                        <input type="text" name="exercise_notes[]" placeholder="e.g., 60s rest">
+                    </div>
+                </div>
+            </div>
+            {% endif %}
+        </div>
+
+        <button type="button" class="btn btn-secondary" onclick="addExercise()">Add Another Exercise</button>
+
+        <div class="form-actions">
+            <button type="submit" class="btn btn-primary">Save Changes</button>
+            <a href="{{ url_for('view_program', program_id=program.id) }}" class="btn btn-secondary">Cancel</a>
+        </div>
+    </form>
+</div>
+
+<script>
+function addExercise() {
+    const exercisesDiv = document.getElementById('exercises');
+    const exerciseItem = document.createElement('div');
+    exerciseItem.className = 'exercise-item';
+    exerciseItem.innerHTML = `
+        <div class="exercise-fields">
+            <div class="form-group">
+                <label>Exercise Name *</label>
+                <input type="text" name="exercise_name[]" required placeholder="e.g., Squats">
+            </div>
+            <div class="form-group">
+                <label>Sets</label>
+                <input type="text" name="exercise_sets[]" placeholder="e.g., 4">
+            </div>
+            <div class="form-group">
+                <label>Reps</label>
+                <input type="text" name="exercise_reps[]" placeholder="e.g., 8-10">
+            </div>
+            <div class="form-group">
+                <label>Notes</label>
+                <input type="text" name="exercise_notes[]" placeholder="e.g., Slow tempo">
+            </div>
+        </div>
+        <button type="button" class="btn btn-danger btn-sm" onclick="this.parentElement.remove()">Remove</button>
+    `;
+    exercisesDiv.appendChild(exerciseItem);
+}
+</script>
+{% endblock %}
