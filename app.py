@@ -1025,31 +1025,43 @@ def get_trainer_clients():
 # Initialize database on module load (works with both direct run and gunicorn)
 def initialize_database():
     """Initialize database if needed - runs on module import"""
-    db_url = os.environ.get('DATABASE_URL')
+    try:
+        db_url = os.environ.get('DATABASE_URL')
 
-    if db_url and 'postgres' in db_url:
-        # PostgreSQL: Check if tables exist, initialize if not
-        try:
-            db = get_db()
-            cursor = db.cursor()
-            cursor.execute("SELECT COUNT(*) FROM users")
-            print("✅ Database tables already exist")
-        except Exception as e:
-            print(f"📊 Initializing PostgreSQL database... (error: {e})")
-            init_db()
-            print("✅ Database initialized")
-    else:
-        # SQLite: Initialize if file doesn't exist
-        if not os.path.exists(app.config['DATABASE']):
-            print("📊 Initializing SQLite database...")
-            init_db()
-            print("✅ Database initialized")
+        if db_url and 'postgres' in db_url:
+            # PostgreSQL: Check if tables exist, initialize if not
+            try:
+                db = get_db()
+                cursor = db.cursor()
+                cursor.execute("SELECT COUNT(*) FROM users")
+                print("✅ Database tables already exist")
+            except Exception as e:
+                print(f"📊 Initializing PostgreSQL database... (error was: {str(e)[:100]})")
+                try:
+                    init_db()
+                    print("✅ Database initialized successfully!")
+                except Exception as init_error:
+                    print(f"❌ Database initialization failed: {init_error}")
+                    raise
+        else:
+            # SQLite: Initialize if file doesn't exist
+            if not os.path.exists(app.config['DATABASE']):
+                print("📊 Initializing SQLite database...")
+                init_db()
+                print("✅ Database initialized")
 
-    # Auto-populate database with exercises and templates if needed
-    auto_populate_db()
+        # Auto-populate database with exercises and templates if needed
+        auto_populate_db()
+    except Exception as e:
+        print(f"❌ CRITICAL: Database initialization failed: {e}")
+        import traceback
+        traceback.print_exc()
+        # Don't raise - let app start anyway so we can see error logs
 
 # Run initialization when module is imported
+print("🚀 Starting app initialization...")
 initialize_database()
+print("🚀 App initialization complete")
 
 if __name__ == '__main__':
     # Get port from environment variable (for deployment) or default to 5000
