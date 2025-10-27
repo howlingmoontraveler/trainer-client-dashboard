@@ -203,7 +203,44 @@ def auto_populate_db():
 
             print(f"✅ Database populated: {final_count} exercises, {template_count} templates")
         else:
-            print(f"✅ Database already populated ({exercise_count} exercises)")
+            print(f"✅ Exercises already populated ({exercise_count} exercises)")
+
+            # Still check if templates need to be populated
+            cursor.execute('SELECT COUNT(*) FROM program_templates')
+            result = cursor.fetchone()
+            template_count = result['count'] if is_postgres else result[0]
+
+            if template_count < 5:  # If fewer than 5 templates, populate them
+                print(f"📊 Only {template_count} templates. Loading templates...")
+                if os.path.exists('all_templates.sql') and os.path.exists('all_template_exercises.sql'):
+                    with open('all_templates.sql', 'r') as f:
+                        sql_content = f.read()
+
+                    if is_postgres:
+                        for line in sql_content.strip().split('\n'):
+                            if line.strip() and line.startswith('INSERT'):
+                                try:
+                                    cursor.execute(line)
+                                except:
+                                    pass
+                    else:
+                        cursor.executescript(sql_content)
+
+                    with open('all_template_exercises.sql', 'r') as f:
+                        sql_content = f.read()
+
+                    if is_postgres:
+                        for line in sql_content.strip().split('\n'):
+                            if line.strip() and line.startswith('INSERT'):
+                                try:
+                                    cursor.execute(line)
+                                except:
+                                    pass
+                    else:
+                        cursor.executescript(sql_content)
+
+                    db.commit()
+                    print("   ✅ Templates loaded!")
 
     except Exception as e:
         print(f"⚠️  Auto-populate error: {e}")
