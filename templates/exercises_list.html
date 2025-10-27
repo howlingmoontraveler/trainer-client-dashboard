@@ -75,9 +75,10 @@
                             <h5 class="card-title">{{ exercise.name }}</h5>
                             <p class="card-text">
                                 <strong>Category:</strong> {{ exercise.category }}<br>
-                                <strong>Difficulty:</strong> 
-                                <span class="badge bg-{% if exercise.difficulty_level == 'beginner' %}success{% elif exercise.difficulty_level == 'intermediate' %}warning{% else %}danger{% endif %}">
-                                    {{ exercise.difficulty_level.title() }}
+                                <strong>Difficulty:</strong>
+                                {% set difficulty = exercise|safe_get('difficulty_level', 'beginner') %}
+                                <span class="badge bg-{% if difficulty == 'beginner' %}success{% elif difficulty == 'intermediate' %}warning{% else %}danger{% endif %}">
+                                    {{ difficulty.title() }}
                                 </span><br>
                                 <strong>Muscle Groups:</strong> {{ exercise.muscle_groups }}<br>
                                 <strong>Equipment:</strong> {{ exercise.equipment }}

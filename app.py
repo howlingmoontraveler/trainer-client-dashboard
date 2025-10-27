@@ -20,6 +20,23 @@ def format_date(value):
     # It's a datetime object
     return value.strftime('%Y-%m-%d')
 
+# Template filter for safe attribute access
+@app.template_filter('safe_get')
+def safe_get(obj, key, default=''):
+    """Safely get attribute from object, works with dict-like and object attributes"""
+    if obj is None:
+        return default
+    # Try dict-like access
+    if hasattr(obj, 'get'):
+        return obj.get(key, default)
+    # Try attribute access
+    if hasattr(obj, key):
+        return getattr(obj, key, default)
+    # Try both cases for key
+    if hasattr(obj, 'get'):
+        return obj.get(key.lower(), obj.get(key.upper(), default))
+    return default
+
 # Database helper functions
 class DatabaseWrapper:
     """Wrapper to make PostgreSQL and SQLite work the same way"""
