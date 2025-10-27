@@ -1057,7 +1057,21 @@ def initialize_database():
                 print(f"📊 program_templates table missing. Running schema initialization...")
                 print(f"   (Original error: {str(e)[:100]})")
                 try:
-                    # Just run init_db - it uses CREATE TABLE IF NOT EXISTS
+                    # Drop and recreate exercise_library if it has wrong schema
+                    db = get_db()
+                    cursor = db.cursor()
+                    print("🗑️  Dropping old tables with incorrect schema...")
+                    cursor.execute("DROP TABLE IF EXISTS exercise_completions CASCADE")
+                    cursor.execute("DROP TABLE IF EXISTS exercises CASCADE")
+                    cursor.execute("DROP TABLE IF EXISTS program_template_exercises CASCADE")
+                    cursor.execute("DROP TABLE IF EXISTS program_templates CASCADE")
+                    cursor.execute("DROP TABLE IF EXISTS progress CASCADE")
+                    cursor.execute("DROP TABLE IF EXISTS programs CASCADE")
+                    cursor.execute("DROP TABLE IF EXISTS exercise_library CASCADE")
+                    db.commit()
+                    print("✅ Old tables dropped")
+
+                    # Now create fresh schema
                     init_db()
                     print("✅ Database schema created successfully!")
                 except Exception as init_error:
