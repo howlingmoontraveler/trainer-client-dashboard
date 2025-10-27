@@ -1039,6 +1039,55 @@ def get_trainer_clients():
 
     return jsonify([{'id': c['id'], 'name': c['full_name']} for c in clients])
 
+# Admin route to manually populate templates
+@app.route('/admin/populate-templates')
+@login_required
+@trainer_required
+def populate_templates_manually():
+    """Manually populate templates - one-time use"""
+    db = get_db()
+    cursor = db.cursor()
+
+    # Check if templates already exist
+    cursor.execute('SELECT COUNT(*) FROM program_templates WHERE created_by = ?', (session['user_id'],))
+    result = cursor.fetchone()
+    existing_count = result['count'] if isinstance(result, dict) else result[0]
+
+    if existing_count > 0:
+        flash(f'You already have {existing_count} templates.', 'info')
+        return redirect(url_for('program_templates'))
+
+    try:
+        # Load templates
+        if os.path.exists('all_templates.sql') and os.path.exists('all_template_exercises.sql'):
+            with open('all_templates.sql', 'r') as f:
+                for line in f:
+                    if line.strip() and line.startswith('INSERT'):
+                        # Replace created_by = 1 with current user's ID
+                        line = line.replace(',1,', f',{session["user_id"]},')
+                        try:
+                            cursor.execute(line)
+                        except:
+                            pass
+
+            with open('all_template_exercises.sql', 'r') as f:
+                for line in f:
+                    if line.strip() and line.startswith('INSERT'):
+                        try:
+                            cursor.execute(line)
+                        except:
+                            pass
+
+            db.commit()
+            flash('Successfully loaded 10 program templates!', 'success')
+        else:
+            flash('Template SQL files not found on server.', 'error')
+    except Exception as e:
+        db.rollback()
+        flash(f'Error loading templates: {e}', 'error')
+
+    return redirect(url_for('program_templates'))
+
 # Initialize database on module load (works with both direct run and gunicorn)
 def initialize_database():
     """Initialize database if needed - runs on module import"""
