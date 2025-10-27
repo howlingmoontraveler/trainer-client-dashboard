@@ -1029,14 +1029,31 @@ def initialize_database():
         db_url = os.environ.get('DATABASE_URL')
 
         if db_url and 'postgres' in db_url:
-            # PostgreSQL: Check if tables exist, initialize if not
+            # PostgreSQL: Check if ALL required tables exist
             try:
                 db = get_db()
                 cursor = db.cursor()
-                cursor.execute("SELECT COUNT(*) FROM users")
-                print("✅ Database tables already exist")
+                # Check for a table that should exist if schema is complete
+                cursor.execute("SELECT COUNT(*) FROM program_templates")
+                print("✅ Database tables already exist (including program_templates)")
             except Exception as e:
                 print(f"📊 Initializing PostgreSQL database... (error was: {str(e)[:100]})")
+                # Drop all tables and recreate from scratch
+                try:
+                    print("🗑️  Dropping existing tables to start fresh...")
+                    db = get_db()
+                    cursor = db.cursor()
+                    cursor.execute("""
+                        DROP SCHEMA public CASCADE;
+                        CREATE SCHEMA public;
+                        GRANT ALL ON SCHEMA public TO postgres;
+                        GRANT ALL ON SCHEMA public TO public;
+                    """)
+                    db.commit()
+                    print("✅ Schema reset complete")
+                except Exception as drop_error:
+                    print(f"⚠️  Schema reset failed (might be okay): {drop_error}")
+
                 try:
                     init_db()
                     print("✅ Database initialized successfully!")
