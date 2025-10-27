@@ -1037,29 +1037,17 @@ def initialize_database():
                 cursor.execute("SELECT COUNT(*) FROM program_templates")
                 print("✅ Database tables already exist (including program_templates)")
             except Exception as e:
-                print(f"📊 Initializing PostgreSQL database... (error was: {str(e)[:100]})")
-                # Drop all tables and recreate from scratch
+                print(f"📊 program_templates table missing. Running schema initialization...")
+                print(f"   (Original error: {str(e)[:100]})")
                 try:
-                    print("🗑️  Dropping existing tables to start fresh...")
-                    db = get_db()
-                    cursor = db.cursor()
-                    cursor.execute("""
-                        DROP SCHEMA public CASCADE;
-                        CREATE SCHEMA public;
-                        GRANT ALL ON SCHEMA public TO postgres;
-                        GRANT ALL ON SCHEMA public TO public;
-                    """)
-                    db.commit()
-                    print("✅ Schema reset complete")
-                except Exception as drop_error:
-                    print(f"⚠️  Schema reset failed (might be okay): {drop_error}")
-
-                try:
+                    # Just run init_db - it uses CREATE TABLE IF NOT EXISTS
                     init_db()
-                    print("✅ Database initialized successfully!")
+                    print("✅ Database schema created successfully!")
                 except Exception as init_error:
                     print(f"❌ Database initialization failed: {init_error}")
-                    raise
+                    import traceback
+                    traceback.print_exc()
+                    # Don't raise - let app start so we can see errors
         else:
             # SQLite: Initialize if file doesn't exist
             if not os.path.exists(app.config['DATABASE']):
